@@ -245,7 +245,6 @@ body[data-theme="dark"] .link { color: var(--night-soft); }
 .type--locked { color: var(--muted); border-style: dashed; background: var(--panel); }
 
 .segs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.segs--4 { grid-template-columns: repeat(4, 1fr); }
 
 .seg {
   min-height: var(--btn-h);

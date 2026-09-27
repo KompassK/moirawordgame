@@ -34,7 +34,7 @@ const UI = {
     blank: {
       name: 'Fill in the blank',
       blurb: 'Supply the missing word from the quote.',
-      players: '1–⁠4 players.',
+      players: '2–⁠4 players.',
       rules: [
         'Everyone takes a turn. The player on your left holds the phone and reads out a line from the show with one word missing. Say the missing word.',
         'One guess, no hints: 1 point for each right answer. Once everyone has had a turn, that’s the end of the round. Highest scorer wins.',
@@ -45,7 +45,7 @@ const UI = {
     episode: {
       name: 'Name the episode',
       blurb: 'Which season and episode is the quote from?',
-      players: '1–⁠4 players.',
+      players: '2–⁠4 players.',
       rules: [
         'Everyone takes a turn. The player on your left holds the phone, reads out a quote from the show and shows you the photo of the scene if there is one. Name the season, then the episode.',
         'The right season scores 1 point; get the episode right too and it’s 3. A wrong season scores nothing. Once everyone has had a turn, that’s the end of the round. Highest scorer wins.',
@@ -136,10 +136,9 @@ const UI = {
 
 const MAIN_PER_TURN = 9;
 const QUESTIONS_PER_TURN = MAIN_PER_TURN + 1; // plus the bonus word, always last
-const MAX_PLAYERS = 4; // one family of four
-// Fewest players per way to play: Define the word needs a tester and an
-// answerer; the other two can be played solo.
-const MIN_PLAYERS = { define: 2, blank: 1, episode: 1 };
+// Every way to play needs a tester and an answerer, so 2–4 players (one family of four).
+const MIN_PLAYERS = 2;
+const MAX_PLAYERS = 4;
 
 // Options 2 and 3 unlock in step 3; until then only Define the word is open.
 function isUnlocked(type) {
@@ -647,7 +646,7 @@ function playerLimit(type) {
 
 function renderSetup() {
   const s = state.setup;
-  const min = MIN_PLAYERS[s.type];
+  const min = MIN_PLAYERS;
   const max = playerLimit(s.type);
   s.count = Math.min(Math.max(s.count, min), Math.max(max, min));
 
@@ -680,7 +679,7 @@ function renderSetup() {
       </div>
       <div class="setup__col">
         <h2 class="label">${esc(UI.playersHeading)}</h2>
-        <div class="segs segs--${MAX_PLAYERS - min + 1}" role="group">${counts.join('')}</div>
+        <div class="segs" role="group">${counts.join('')}</div>
         ${max < MAX_PLAYERS ? `<p class="hint-text">${esc(UI.notEnoughWords(max))}</p>` : ''}
         <h2 class="label">${esc(UI.namesHeading)}</h2>
         <div class="names">${names.join('')}</div>
@@ -943,7 +942,7 @@ let lastScreenKey = '';
 function render() {
   let html;
   let theme = 'light';
-  if (!DATA || PLAYER_LIMIT < MIN_PLAYERS.define) html = renderNoData();
+  if (!DATA || PLAYER_LIMIT < MIN_PLAYERS) html = renderNoData();
   else switch (state.screen) {
     case 'front': html = renderFront(); break;
     case 'setup': html = renderSetup(); break;

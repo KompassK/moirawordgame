@@ -88,8 +88,8 @@ All other columns are ignored. `Bonus point available? (Y/N)` is retired; do not
   > We all love Moira Rose but it's fair to say she was a sesquipedalian (that's someone who uses too many long words). Still we can all learn from her wonderful use of words. The aim of this game is to test our knowledge and understanding of her vocabulary.
 - Then 'There are three ways to play:' and the **three way-to-play boxes**, where the way to play is chosen:
   - **Define the word** – 'Say what the word means. Hints cost points. 2–4 players.'
-  - **Fill in the blank** – 'Supply the missing word from the quote. 1–4 players.'
-  - **Name the episode** – 'Which season and episode is the quote from? 1–4 players.'
+  - **Fill in the blank** – 'Supply the missing word from the quote. 2–4 players.'
+  - **Name the episode** – 'Which season and episode is the quote from? 2–4 players.'
   - A locked box is dashed, greyed, can't be chosen, and shows **only** 'Play a Define the word game first to unlock this mode' – no tag line, no player range. Its tag line and player range appear once it unlocks (`isUnlocked()` in `game.js`; only Define the word until step 3). A word joiner keeps '2–4' together on one line.
 - A big **Start** button goes to How to play.
 
@@ -108,10 +108,7 @@ A small **Rules** link on the How to play screen and on the pass-the-device scre
 ### How to play (the second screen: set-up)
 - A top bar with **‹ Back** (to the front card, to change the way to play) and **Rules**.
 - The chosen way to play's name as the **title** (e.g. 'Define the word', shrunk to fit one line if needed), **How to play** as the subtitle under it, then its how-to-play text.
-- **Number of players**, never more than 4 (five and six don't exist):
-  - Define the word: **2, 3 or 4** (it needs a tester and an answerer).
-  - Fill in the blank and Name the episode: **1, 2, 3 or 4** – solo play is allowed once they unlock (step 4 decides how a solo game runs; see Open questions).
-  - Minimums live in `MIN_PLAYERS` in `game.js`. For Define the word the pool-size check stays (the dummy list supports 4) but won't bite.
+- **Number of players: 2, 3 or 4, for every way to play.** Every game needs a tester and an answerer, so there is no solo mode; five and six don't exist. (`MIN_PLAYERS` / `MAX_PLAYERS` in `game.js`.) For Define the word the pool-size check stays (the dummy list supports 4) but won't bite.
 - Names in seating order (clockwise). A blank name becomes 'Player N', so a game can start in three taps (Start, Start the game, ready). **Start the game**.
 - Phone: all of this in one column with Start the game pinned; tablet: how-to-play text left, players and names right.
 - Words per turn is fixed, not configurable.
@@ -196,7 +193,7 @@ Options 2 and 3 draw only from words with an Option 1 history on this device, an
 
 0. **Project setup** (CLAUDE.md, build script, `words.json`, placeholder `index.html`). ← done
 1. **Option 1 playable slice on dummy data**: setup, turns, hint ladder, bonus word, reveal card, pass-the-device, scoreboard, placeholder still. ← done
-2. **Rename to Sesquipedalian, restyle, answers to open questions**: front card with the way-to-play boxes, How to play screen with players and names, rules overlay, 2–4 players (1–4 for Options 2 and 3), black/white/grey palette, self-hosted Josefin Sans, Give up, undo on the turn screen, re-show photo, definition on a correct reveal, tiebreak, End game. ← done
+2. **Rename to Sesquipedalian, restyle, answers to open questions**: front card with the way-to-play boxes, How to play screen with players and names, rules overlay, 2–4 players for every way to play (no solo mode), black/white/grey palette, self-hosted Josefin Sans, Give up, undo on the turn screen, re-show photo, definition on a correct reveal, tiebreak, End game. ← done
 3. Persistent no-repeat tracking and the Option 2/3 unlock.
 4. Options 2 and 3.
 5. Real images and the quote-overlay rule.
@@ -210,8 +207,7 @@ One step per session. Test in a browser before committing: open `index.html` dir
 1. **Tiebreak with three or more tied.** After a round, players behind the leaders drop out and only the leaders play on. Is that right, or should everyone who was tied keep playing until one player is ahead of all the others?
 2. **When the tiebreak runs out.** A draw is declared when there aren't enough unused bonus words for a *whole* round, so a round is never played partly. Once step 3 tracks words across games, should the tiebreak reuse bonus words from earlier games before declaring a draw, or only use words not drawn in this game (as now)?
 3. **How to play for Options 2 and 3.** The texts are drafts in your voice (in `UI.gameTypes.blank.rules` and `.episode.rules`). Please check the wording, and say how many words a turn has in each (not yet defined), so the text can say so.
-4. **Solo Fill in the blank and Name the episode.** With one player there's no one to hold the device and read aloud, and no one to judge. For step 4: does the solo player read the quote themselves and tap Correct/Wrong on their own answer (honour system), or should solo mode show choices to pick from? And how many words make a solo game?
-5. **Give up in the rules text.** The Define the word how-to-play doesn't mention Give up. Add a line such as 'You can give up on a word at any time, for no points.'?
+4. **Give up in the rules text.** The Define the word how-to-play doesn't mention Give up. Add a line such as 'You can give up on a word at any time, for no points.'?
 
 ## Conventions
 
