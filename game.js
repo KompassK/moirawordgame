@@ -672,8 +672,8 @@ function renderSetup() {
       ${link('back', UI.back)}
       ${link('showRules', UI.rulesLink)}
     </header>
-    <h1 class="display setup__title">${esc(UI.howToPlay)}</h1>
-    <p class="setup__type">${esc(UI.gameTypes[s.type].name)}</p>
+    <h1 class="display fit setup__title">${esc(UI.gameTypes[s.type].name)}</h1>
+    <p class="setup__type">${esc(UI.howToPlay)}</p>
     <div class="setup__body">
       <div class="setup__col">
         <div class="prose">${paragraphs(UI.gameTypes[s.type].rules)}</div>

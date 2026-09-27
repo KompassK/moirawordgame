@@ -107,7 +107,7 @@ A small **Rules** link on the How to play screen and on the pass-the-device scre
 
 ### How to play (the second screen: set-up)
 - A top bar with **‹ Back** (to the front card, to change the way to play) and **Rules**.
-- The title **How to play**, the chosen way to play's name under it, then its how-to-play text.
+- The chosen way to play's name as the **title** (e.g. 'Define the word', shrunk to fit one line if needed), **How to play** as the subtitle under it, then its how-to-play text.
 - **Number of players**, never more than 4 (five and six don't exist):
   - Define the word: **2, 3 or 4** (it needs a tester and an answerer).
   - Fill in the blank and Name the episode: **1, 2, 3 or 4** – solo play is allowed once they unlock (step 4 decides how a solo game runs; see Open questions).
