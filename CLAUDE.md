@@ -1,18 +1,20 @@
-# Moira Words – project brief
+# Sesquipedalian – project brief
 
 Ground truth for every build step. Read it in full before changing anything. When a step adds detail, record it here.
 
 ## Purpose
 
-A family vocabulary quiz built around Moira Rose's words. One device is passed round the table and read aloud: the tester holds it and reads, the answerer guesses without seeing the screen. Single-page web app, no back end.
+**Sesquipedalian** is a Moira Rose vocabulary game for one family of four. One device is passed round the table and read aloud: the tester holds it and reads, the answerer guesses without seeing the screen. Single-page web app, no back end.
+
+The repo (`KompassK/moirawordgame`) and folder (`moira-words`) keep their old names so the web address doesn't change: https://kompassk.github.io/moirawordgame/. Internal names such as `window.MOIRA_WORDS` also stay.
 
 ## Tech constraints
 
 - Plain HTML, CSS and JavaScript. No framework, no bundler, no TypeScript, no build step for the app itself.
 - Static files only. Must run by double-clicking `index.html` (`file://`) and from GitHub Pages. Keep every path relative (`./…`) because Pages serves from a sub-path.
 - Node is used **only** for the build script (`npm run build`), never at runtime. `xlsx` (SheetJS, from the SheetJS CDN) is the only dependency.
-- No accounts, no analytics, no sharing. The only third-party request is Google Fonts for the display face (see Open questions). All persistence is `localStorage` (from step 3; step 1 keeps the game in memory, so a refresh ends it).
-- PWA manifest and service worker are added at build step 6. Hooks are marked in `index.html`; don't add them early. Once there is a service worker, bump its cache version every time a cached file changes.
+- No accounts, no analytics, no sharing, **no third-party requests** (fonts are self-hosted; the game works offline). All persistence is `localStorage` (from step 3; until then the game lives in memory, so a refresh ends it).
+- PWA manifest and service worker are added at build step 6. Hooks are marked in `index.html`; don't add them early. Once there is a service worker, bump its cache version every time a cached file changes, and cache `assets/fonts/`.
 - Primary target: phone in portrait. Must also work on a tablet in either orientation.
 - Keep the screen awake during a game with the Wake Lock API where supported; ignore silently if not.
 
@@ -20,23 +22,24 @@ A family vocabulary quiz built around Moira Rose's words. One device is passed r
 
 | File | Role |
 |---|---|
-| `index.html` | Shell: fonts, `style.css`, then `words.js`, then `game.js`. |
-| `style.css` | All styling. Colour tokens on `:root`. |
-| `game.js` | All game logic and screens. **Every UI string lives in the `UI` object at the top.** |
+| `index.html` | Shell: `style.css`, then `words.js`, then `game.js`. No external links. |
+| `style.css` | All styling, including the `@font-face` rules. Colour tokens on `:root`. |
+| `game.js` | All game logic and screens. **Every UI string lives in the `UI` object at the top**, including the front-card and how-to-play text. |
 | `words.js` | Generated. `window.MOIRA_WORDS = {…}`, loaded with a plain `<script>` so `file://` works (browsers block `fetch` from `file://`). |
 | `words.json` | Generated. Same data, kept for reference. |
+| `assets/fonts/` | Josefin Sans variable woff2 (Latin, Latin Extended), weights 100–700 in one file each, plus its licence `OFL.txt`. |
 | `assets/placeholder.svg` | Scene still used for every word until step 5. Real stills go in `assets/stills/<imageFile>`; `stillSrc()` in `game.js` is the one place to switch. |
 | `scripts/build-words.js` | Spreadsheet → `words.json` + `words.js`. |
 
-## Look and feel – 'Rose Apothecary'
+## Look and feel
 
-- Cream background `#f6f1e7`, near-black ink `#1d1a17`, one accent: muted gold `#a07c3f` (badges, the chosen game type, 'winner'). Correct is green `#35664a`, Wrong is red `#a13c33`. Restrained; readability always beats decoration.
-- The headline word is set in **Playfair Display** (Google Fonts) with a system serif fallback (Palatino, Georgia) so it still looks right offline. Body text is the system sans-serif.
-- Sizes: the word is at least 44px on a phone and 72px on a tablet, and **always on one line** – `fitWord()` shrinks it only if it would overflow (never below 32px, when it may wrap). Buttons are at least 56px tall (60px phone, 68px tablet).
-- Phone: buttons are full width and **pinned to the bottom** of the turn screen, always in the same order – hint, Correct, Wrong – so thumbs learn them.
-- Tablet portrait (≥700px): word full width on top; tester panel and quote/scene side by side below; buttons in one row.
-- Tablet landscape (≥900px, landscape): two columns – word and badge left, tester panel and quote right.
-- Bonus word screen: dark background (`#1e1a17`), cream text – visibly different.
+- **Black, white and greys only.** Background white (`#ffffff`; never darker than `#fafafa`), ink `#111111`, greys for panels (`#f5f5f5`), pills (`#ececec`), rules and muted text. No cream, brown, gold or rose. **The only colours anywhere are green `#35664a` on Correct and red `#a13c33` on Wrong.** (End game's confirm button is black, not red.)
+- **Type:** Josefin Sans (self-hosted from `assets/fonts/`) for the title, the headline word, handover and final headings, badges, labels and buttons – always in **capitals with 0.08em letter-spacing**, like signage. Body text, the tester panel's definitions, quotes, the reveal card's sentences and small links use the system sans-serif. Josefin sits high in its line box, so signage elements get a little extra top padding.
+- **Headline sizes:** the word aims for at least 44px on a phone and 72px on a tablet and is **always on one line**; `fitAll()` shrinks any `.fit` element (title, word, final heading) only if it would overflow its column (never below 28px, when it may wrap). Josefin capitals are wide, so on the dummy list: phone – 19 of 50 words shrink below 44px (smallest 33px, 'Discombobulate'); tablet portrait – 7 below 72px (smallest 62px); tablet landscape – none (smallest 86px). Accepted in step 2.
+- Buttons are at least 56px tall (60px phone, 68px tablet); Correct and Wrong are taller still.
+- Phone: turn-screen buttons are full width and **pinned to the bottom**, always in the same order – hint, Correct, Wrong – with two small text controls under them: **Give up** (left) and **Oops, go back** (right).
+- Tablets, both orientations: the word full width on top; tester panel beside the quote and scene below; hint, Correct and Wrong in one row. (Step 1's two-column landscape layout was dropped because Josefin capitals don't fit a half-width column.)
+- Bonus word screen: black background, white text – visibly different, within the palette.
 - Tested at 390×844, 768×1024 and 1024×768.
 
 ## Data: spreadsheet → `words.json`
@@ -76,11 +79,32 @@ All other columns are ignored. `Bonus point available? (Y/N)` is retired; do not
 
 `data/` currently holds a **dummy** test set (36 main, 14 bonus, no shared quotes). It is swapped for the live file, same column layout, at build step 7. Rebuild and commit `words.json` and `words.js` whenever the spreadsheet changes.
 
-## Game rules
+## Screens and flow
+
+**Front card** (on opening, and after End game) → **Setup** → handover → turns → reveal after every word → pass-the-device between turns → **final scoreboard** → optional **tiebreak**.
+
+### Front card
+- The title 'Sesquipedalian', large; the line 'A Moira Rose vocabulary game'; then this intro, **word for word** (in `UI.intro`):
+  > We all love Moira Rose but it's fair to say she was a sesquipedalian (that's someone who uses too many long words). Still we can all learn from her wonderful use of words. The aim of this game is to test our knowledge and understanding of her vocabulary.
+- Then 'There are three ways to play:' and the three names as a list, and a big **Start** button to setup.
+
+### Rules overlay
+A small **Rules** link on the setup screen and on the pass-the-device screen opens the front card's content as an overlay – title, tagline, intro – followed by 'How to play' for all three ways to play. Close with the **Close** button or Escape.
+
+### How to play (in `UI.gameTypes[…].rules`)
+**Define the word** – supplied by Katharine; obvious typos fixed ('asked to define', 'had a turn', '3 points'), otherwise as written:
+1. Everyone takes a turn to be asked to define 10 words. The player on your left holds the phone and reads out the words for you to define: nine from the show's dialogue and one Catherine O'Hara loquacity masterclass as a bonus. Once everyone has had a turn, that's the end of the round. Highest scorer wins.
+2. For each word, say what it means. Guess it cold for 4 points. You can ask to hear the full quote – but if you do, your score will drop to 3 points. Ask to see a photo of the scene with the quote and the score drops to 2. A wrong guess always drops your possible points for that word to 1, but you can keep going with hints and get the point if you get it right. Any real meaning of the word counts, including the one Moira had in mind.
+3. The bonus word has no quote. Guess it cold for 5 points, or hear it in an invented sentence first for 3. Guess wrong, then hear the sentence and get it right, for 2.
+4. The asker judges. Adults decide what's close enough.
+
+**Fill in the blank** and **Name the episode** – drafted in the same voice from the rules below; to be confirmed (see Open questions).
 
 ### Setup
-- Choose a game type: **Option 1** Define the word, **Option 2** Fill in the blank, **Option 3** Name the episode. Options 2 and 3 are greyed out with the note 'Play a Define the word game first to unlock this mode' until unlocked (see Unlock rule).
-- Choose 2–6 players, then enter names in seating order (clockwise). A blank name becomes 'Player N', so a game can start in two taps. Player counts the word list can't serve without repeats are disabled (see Draw).
+- A top bar with the game's name and the **Rules** link.
+- **Way to play**: **Option 1** Define the word, **Option 2** Fill in the blank, **Option 3** Name the episode. Options 2 and 3 are greyed out with the note 'Play a Define the word game first to unlock this mode' until unlocked (see Unlock rule). Under them, 'How to play' for the chosen way (Define the word).
+- **Number of players: 2, 3 or 4** – five and six don't exist. The pool-size check stays (the dummy list supports 4) but won't bite.
+- Names in seating order (clockwise). A blank name becomes 'Player N', so a game can start in two taps. **Start the game**.
 - Words per turn is fixed, not configurable.
 
 ### Turns
@@ -88,12 +112,11 @@ All other columns are ignored. `Bonus point available? (Y/N)` is retired; do not
 - A round is one pass in which every player has one turn. **A game is one round.**
 - Option 1 turn: 9 main-pool words, then 1 bonus-pool word (always the tenth and last).
 - Before the first turn a handover screen says 'Pass the device to [tester]' with an 'I'm [tester], ready' button, so nothing is shown until the tester has the device.
-- After each turn except the last: pass-the-device screen – 'Pass the device to [next tester]', the answerer's score for the turn, a mini scoreboard, and 'I'm [next tester], ready'. After the last word of the last turn the reveal card's button reads 'See the final scores' and goes straight to the final scoreboard.
+- After each turn except the last: pass-the-device screen – 'Pass the device to [next tester]', the answerer's score for the turn, a mini scoreboard, 'I'm [next tester], ready', and two small links: **Rules** and **End game**. After the last word of the last turn the reveal card's button reads 'See the final scores'.
 
 ### Draw
-- Per turn: 9 main words at random, then 1 bonus word at random. No word is drawn twice in a game.
+- Per turn: 9 main words at random, then 1 bonus word at random. No word is drawn twice in a game (tiebreak words included).
 - Shared quotes: once a main word is drawn, other words with the same `quoteGroup` are excluded from the rest of that turn. Only if the pool is too small to avoid it is a sibling allowed (logged as a console warning).
-- The most players offered is the smaller of 6, ⌊main words ÷ 9⌋ and the number of bonus words. The dummy data allows 4.
 
 ### Option 1 – main-pool words (hint ladder)
 The tester's screen, top to bottom: 'Testing: [answerer] · Question n of 10'; the word, very large; a **Points available** badge; a tester-only panel (definition, keywords, and the twist if present – headed 'Any of these senses counts'); then the quote and scene context, **dimmed until 'Read the quote' is tapped**. The answerer must not look. The tester says the word, then:
@@ -102,34 +125,54 @@ The tester's screen, top to bottom: 'Testing: [answerer] · Question n of 10'; t
 |---|---|---|
 | 1 | Guess on the word alone | 4 |
 | 2 | Tester taps **Read the quote** (quote and scene stop being dimmed), reads it aloud | 3 |
-| 3 | Tester taps **Show the photo**: full-screen still, quote overlaid in large text on a translucent dark band near the bottom (no overlay when `quoteOnPhoto` is true); tester turns the device round; a tap anywhere returns. The hint button is then disabled ('Photo shown'). | 2 |
+| 3 | Tester taps **Show the photo**: full-screen still, quote overlaid in large text on a translucent dark band near the bottom (no overlay when `quoteOnPhoto` is true); tester turns the device round; a tap anywhere returns. | 2 |
 
+- After the photo, the hint button becomes **Show the photo again**: it re-opens the photo as often as wanted and **never changes the points**.
 - **Correct** scores whatever the badge shows and goes to the reveal card.
-- **Wrong before the last hint** drops the badge to 1 for good ('Not quite. This question is now worth 1 point – keep going.'). The turn continues with the same buttons; later hints don't change the badge.
-- **Wrong after the photo** (no hints left) scores 0 and goes to the reveal card. So: eventually right → 1; never right → 0.
+- **Wrong before the last hint** drops the badge to 1 for good ('Not quite. This question is now worth 1 point – keep going.'). The answerer can keep guessing at 1 point as long as they like (intended); later hints don't change the badge.
+- **Wrong after the photo** scores 0 and goes to the reveal card. So: eventually right → 1; never right → 0.
+- **Give up** (small, under Wrong) scores 0 at any point and goes to the reveal card.
+- **Oops, go back** (small, under Wrong) undoes the last tap on this question – a hint, a mis-tapped Wrong, anything – as many steps back as the question has had taps. It restores the question exactly, including the badge and the dimming. It is disabled before the first tap. Opening the photo again is not a tap that needs undoing.
 - Judging: the definition is visible to the tester throughout; the table agrees and the tester taps Correct or Wrong. Any sense of the word counts: if `twist` is present, either meaning scores the full ladder value. No extra point for a second meaning.
 
 ### Catherine O'Hara bonus word (bonus-pool words)
-- Dark screen, a 'Catherine O'Hara bonus word' badge, the word very large, a Points available badge, and a tester-only panel with definition and keywords. No show quote, no photo.
-- Two buttons: **Hear it in a sentence** and **Guess**. 'Guess' swaps to Correct / Wrong. 'Hear it in a sentence' shows `exampleSentence` directly under the word, in a dashed sans-serif box (deliberately unlike a show quote), captioned 'Not a real quote – just for the game', then shows Correct / Wrong.
+- Black screen, a 'Catherine O'Hara bonus word' badge, the word very large, a Points available badge, and a tester-only panel with definition and keywords. No show quote, no photo.
+- Two buttons: **Hear it in a sentence** and **Guess**. 'Guess' swaps to Correct / Wrong. 'Hear it in a sentence' shows `exampleSentence` directly under the word, in a dashed box (deliberately unlike a show quote), captioned 'Not a real quote – just for the game', then shows Correct / Wrong.
 - Scoring:
   - cold guess right → **5**
   - sentence first, then right → **3**
   - wrong cold, then sentence, then right → **2**
   - wrong after the sentence → **0**
 - After a wrong cold guess the only path is the sentence (Guess is disabled). One guess only after the sentence. The app records whether a cold guess was tried (`coldTried`) before the sentence was requested.
+- **Give up** and **Oops, go back** work exactly as on main words.
 - If a bonus word has no `exampleSentence`, the sentence button is disabled and a wrong cold guess scores 0.
 
 ### Reveal card (after every word)
-- Large: 'Yes, you're right!' or 'Sorry, that's not right – [Word] means [definition].' (The definition's first letter is lowercased unless it starts with 'I' or a capitalised run such as an acronym, and a trailing full stop is dropped.)
+- Right: 'Yes, you're right!', then **the definition underneath in smaller text**: '[Word] means [definition].'
+- Wrong or given up: 'Sorry, that's not right – [Word] means [definition].'
+- The definition's first letter is lowercased when its first word is 'A' or an ordinary capitalised word (not 'I', not an all-capitals word), and a trailing full stop is dropped.
 - Then, only when `sceneContext` is non-empty (so never for bonus words): 'In this scene, [sceneContext].' – the scene text is used as written, only a trailing full stop is dropped.
 - The points for the question ('+3 points', or 'No points') and the answerer's running total.
-- A big **Next** button and an **Oops, go back** link: a one-level undo that restores the question exactly as it was before the tap that ended it, and takes the points back off.
+- A big **Next** button and an **Oops, go back** link that restores the question as it was before the tap that ended it (and takes the points back off), with its own undo history intact.
 
-### Option 2 – Fill in the blank
+### Final scoreboard
+- Ranked names and totals (equal scores share a rank).
+- One leader: '[Name] wins!'. Level at the top: 'Tied', the tied names, a one-line explanation, and a **Tiebreak** button.
+- **Play again** starts a new game straight away with the same players; **New game** returns to setup with the names kept; a small **End game** link (with confirmation) returns to the front card.
+
+### Tiebreak
+- Offered when the top score is shared. The tied players, in seating order, each answer one Catherine O'Hara bonus word per round, scored exactly as a normal bonus word and added to their totals. The tester is the next player round the table, as usual, with a pass-the-device screen before each word ('Tiebreak – round n', the tied players' scores).
+- Words: bonus words not yet drawn in this game, at random. (From step 3, prefer words never asked on this device.)
+- After each full round, if one player is ahead, they win ('[Name] wins!', 'Won on the tiebreak'). If not, anyone behind the leaders drops out ('Still level: A and B. Another round.') and the leaders play another round.
+- If there aren't enough unused bonus words for every remaining player to have one in the next round, it's a **Draw** ('The bonus words have run out, so it's a draw between A and B.').
+
+### End game
+A small **End game** link on the pass-the-device screen and the final scoreboard. It asks 'End this game? Scores will be lost.' – **End game** (black) or **Keep playing** (or Escape) – and returns to the front card.
+
+### Option 2 – Fill in the blank (step 4)
 Tester sees the quote with the word blanked and reads it aloud; answerer supplies the word. 1 point, one guess, no hints.
 
-### Option 3 – Name the episode
+### Option 3 – Name the episode (step 4)
 Tester reads the quote (and shows the photo if there is one); answerer names the season, then the episode. Season right → 1; season and episode right → 3; season wrong → 0.
 
 ### No-repeat tracking (step 3)
@@ -140,17 +183,11 @@ Tester reads the quote (and shows the photo if there is one); answerer names the
 ### Unlock rule (step 3)
 Options 2 and 3 draw only from words with an Option 1 history on this device, and unlock once that set holds 10 or more words.
 
-### Tiebreak
-Level final scores: the tied players alternate bonus-pool words, sudden death. **Not built yet** – until then the final scoreboard just says 'Tied'.
-
-### Final scoreboard
-Ranked names and totals (equal scores share a rank); the winner celebrated ('[Name] wins!'), or 'Tied' with the tied names if the top score is shared. **Play again** starts a new game straight away with the same players; **New game** returns to setup with the names kept.
-
 ## Build order
 
 0. **Project setup** (CLAUDE.md, build script, `words.json`, placeholder `index.html`). ← done
 1. **Option 1 playable slice on dummy data**: setup, turns, hint ladder, bonus word, reveal card, pass-the-device, scoreboard, placeholder still. ← done
-2. Play-test fixes and screen design.
+2. **Rename to Sesquipedalian, restyle, answers to open questions**: front card and rules overlay, 2–4 players, black/white/grey palette, self-hosted Josefin Sans, Give up, undo on the turn screen, re-show photo, definition on a correct reveal, tiebreak, End game. ← done
 3. Persistent no-repeat tracking and the Option 2/3 unlock.
 4. Options 2 and 3.
 5. Real images and the quote-overlay rule.
@@ -161,20 +198,15 @@ One step per session. Test in a browser before committing: open `index.html` dir
 
 ## Open questions
 
-1. **Five and six players.** A game needs 9 × players main words and 1 × players bonus words with no repeats, so the dummy data supports at most 4 players and setup disables 5 and 6. How big is the live pool? If it's under 54 main words, should big games be allowed to repeat words across turns?
-2. **Endless guessing at 1 point.** After a wrong guess the badge sits at 1 and the answerer can keep guessing until the photo is shown; only a wrong guess after the photo ends the question at 0. Is that intended, or should each rung allow one guess?
-3. **Giving up early.** The only way to score 0 is to tap through every hint and then Wrong. Is a 'Give up' button wanted?
-4. **Mis-tapped Wrong mid-ladder.** 'Oops, go back' is only on the reveal card, so a mis-tapped Wrong that caps a question at 1 can't be undone. Add an undo there too?
-5. **Photo shown once.** The hint button is disabled after the photo, so the tester can't show it again. Should they be able to?
-6. **Correct reveal line.** On a right answer the card says only 'Yes, you're right!' and doesn't read out the definition. Intended?
-7. **Tiebreak** isn't in any build step. Which step should it join?
-8. **Quitting a game.** There's no way to abandon a game except reloading the page. Add a discreet 'End game' control?
-9. **Google Fonts** is a third-party request (it shares the viewer's IP address with Google) and won't work offline. Self-host Playfair Display in `assets/` at step 6 so the PWA is fully offline?
+1. **Tiebreak with three or more tied.** After a round, players behind the leaders drop out and only the leaders play on. Is that right, or should everyone who was tied keep playing until one player is ahead of all the others?
+2. **When the tiebreak runs out.** A draw is declared when there aren't enough unused bonus words for a *whole* round, so a round is never played partly. Once step 3 tracks words across games, should the tiebreak reuse bonus words from earlier games before declaring a draw, or only use words not drawn in this game (as now)?
+3. **How to play for Options 2 and 3.** The texts are drafts in your voice (in `UI.gameTypes.blank.rules` and `.episode.rules`). Please check the wording, and say how many words a turn has in each (not yet defined), so the text can say so.
+4. **Give up in the rules text.** The Define the word how-to-play doesn't mention Give up. Add a line such as 'You can give up on a word at any time, for no points.'?
 
 ## Conventions
 
 - British English in all UI text and comments.
 - Single quotes in prose (UI text and docs).
-- The `quote` field is never modified by code: no trimming, re-punctuating or smart-quoting. Display it exactly as it is in `words.json`.
+- The `quote` field is never modified by code: no trimming, re-punctuating or smart-quoting. Display it exactly as it is in `words.json`. (Capitals on the headline word are CSS only; the data is untouched.)
 - All UI strings go in the `UI` object at the top of `game.js`.
 - Every step is committed to git with a short message.

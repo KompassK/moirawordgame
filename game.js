@@ -1,6 +1,6 @@
-// Moira Words – game logic and screens.
-// Plain JavaScript, no framework. Game state lives in memory only (step 1);
-// a page refresh ends the game.
+// Sesquipedalian – game logic and screens.
+// Plain JavaScript, no framework. Game state lives in memory only until
+// step 3; a page refresh ends the game.
 
 'use strict';
 
@@ -8,20 +8,57 @@
 // Every string the players see. British English, single quotes in prose.
 
 const UI = {
-  title: 'Moira Words',
-  tagline: 'A family game of Moira’s most magnificent words',
-  gameTypeHeading: 'Game type',
+  title: 'Sesquipedalian',
+  tagline: 'A Moira Rose vocabulary game',
+
+  // Front card. The intro wording is fixed; keep it as written.
+  intro: [
+    'We all love Moira Rose but it’s fair to say she was a sesquipedalian (that’s someone who uses too many long words). Still we can all learn from her wonderful use of words. The aim of this game is to test our knowledge and understanding of her vocabulary.',
+  ],
+  waysToPlay: 'There are three ways to play:',
+  frontStart: 'Start',
+
+  howToPlay: 'How to play',
   gameTypes: {
-    define: { name: 'Define the word', blurb: 'Say what the word means. Hints cost points.' },
-    blank: { name: 'Fill in the blank', blurb: 'Supply the missing word from the quote.' },
-    episode: { name: 'Name the episode', blurb: 'Which season and episode is the quote from?' },
+    define: {
+      name: 'Define the word',
+      blurb: 'Say what the word means. Hints cost points.',
+      rules: [
+        'Everyone takes a turn to be asked to define 10 words. The player on your left holds the phone and reads out the words for you to define: nine from the show’s dialogue and one Catherine O’Hara loquacity masterclass as a bonus. Once everyone has had a turn, that’s the end of the round. Highest scorer wins.',
+        'For each word, say what it means. Guess it cold for 4 points. You can ask to hear the full quote – but if you do, your score will drop to 3 points. Ask to see a photo of the scene with the quote and the score drops to 2. A wrong guess always drops your possible points for that word to 1, but you can keep going with hints and get the point if you get it right. Any real meaning of the word counts, including the one Moira had in mind.',
+        'The bonus word has no quote. Guess it cold for 5 points, or hear it in an invented sentence first for 3. Guess wrong, then hear the sentence and get it right, for 2.',
+        'The asker judges. Adults decide what’s close enough.',
+      ],
+    },
+    blank: {
+      name: 'Fill in the blank',
+      blurb: 'Supply the missing word from the quote.',
+      rules: [
+        'Everyone takes a turn. The player on your left holds the phone and reads out a line from the show with one word missing. Say the missing word.',
+        'One guess, no hints: 1 point for each right answer. Once everyone has had a turn, that’s the end of the round. Highest scorer wins.',
+        'The lines come from words you’ve already met in Define the word, so play that first.',
+        'The asker judges. Adults decide what’s close enough.',
+      ],
+    },
+    episode: {
+      name: 'Name the episode',
+      blurb: 'Which season and episode is the quote from?',
+      rules: [
+        'Everyone takes a turn. The player on your left holds the phone, reads out a quote from the show and shows you the photo of the scene if there is one. Name the season, then the episode.',
+        'The right season scores 1 point; get the episode right too and it’s 3. A wrong season scores nothing. Once everyone has had a turn, that’s the end of the round. Highest scorer wins.',
+        'The quotes come from words you’ve already met in Define the word, so play that first.',
+      ],
+    },
   },
+  gameTypeHeading: 'Way to play',
   lockedNote: 'Play a Define the word game first to unlock this mode',
   playersHeading: 'Number of players',
   namesHeading: 'Names, in seating order (clockwise)',
   defaultName: n => `Player ${n}`,
   notEnoughWords: max => `There are only enough words for ${max} players at the moment.`,
-  start: 'Start',
+  startGame: 'Start the game',
+  rulesLink: 'Rules',
+  close: 'Close',
 
   passTo: name => `Pass the device to ${name}`,
   firstTurnNote: (answerer, tester) => `${tester} reads the questions to ${answerer}. ${answerer}, don’t look at the screen.`,
@@ -39,9 +76,10 @@ const UI = {
   sceneLabel: 'The scene',
   readQuote: 'Read the quote',
   showPhoto: 'Show the photo',
-  photoShown: 'Photo shown',
+  showPhotoAgain: 'Show the photo again',
   correct: 'Correct',
   wrong: 'Wrong',
+  giveUp: 'Give up',
   cappedNote: 'Not quite. This question is now worth 1 point – keep going.',
   lastChanceNote: 'Last hint used. One more guess.',
   photoBack: 'Tap anywhere to go back',
@@ -56,7 +94,8 @@ const UI = {
   bonusSentenceNote: 'Read the sentence aloud. One guess.',
 
   revealRight: 'Yes, you’re right!',
-  revealWrong: (word, definition) => `Sorry, that’s not right – ${word} means ${lowerFirst(stripFullStop(definition))}.`,
+  revealWrong: (word, definition) => `Sorry, that’s not right – ${word} means ${asClause(definition)}.`,
+  revealMeaning: (word, definition) => `${word} means ${asClause(definition)}.`,
   // sceneContext is written to follow the lead-in, so it is used as-is.
   revealScene: scene => `In this scene, ${stripFullStop(scene)}.`,
   pointsScored: pts => (pts === 0 ? 'No points' : `+${pts} ${pts === 1 ? 'point' : 'points'}`),
@@ -73,6 +112,20 @@ const UI = {
   playAgain: 'Play again',
   newGame: 'New game',
 
+  tiebreak: 'Tiebreak',
+  tiebreakNote: 'The tied players take turns with Catherine O’Hara bonus words. After each round, whoever is ahead wins.',
+  tiebreakMeta: (name, round) => `Tiebreak · Round ${round} · Testing: ${name}`,
+  tiebreakRound: round => `Tiebreak – round ${round}`,
+  tiebreakStillLevel: names => `Still level: ${joinNames(names)}. Another round.`,
+  wonOnTiebreak: 'Won on the tiebreak',
+  draw: 'Draw',
+  drawNote: names => `The bonus words have run out, so it’s a draw between ${joinNames(names)}.`,
+
+  endGame: 'End game',
+  endConfirm: 'End this game? Scores will be lost.',
+  endYes: 'End game',
+  endNo: 'Keep playing',
+
   noData: 'The word list didn’t load. Run npm run build, then reload this page.',
 };
 
@@ -81,7 +134,7 @@ const UI = {
 const MAIN_PER_TURN = 9;
 const QUESTIONS_PER_TURN = MAIN_PER_TURN + 1; // plus the bonus word, always last
 const MIN_PLAYERS = 2;
-const MAX_PLAYERS = 6;
+const MAX_PLAYERS = 4; // one family of four
 const PLACEHOLDER_STILL = './assets/placeholder.svg';
 
 // Main-pool hint ladder: points for a right answer after 0, 1 or 2 hints.
@@ -104,7 +157,8 @@ const PLAYER_LIMIT = Math.min(MAX_PLAYERS, Math.floor(MAIN.length / MAIN_PER_TUR
 // --- state ------------------------------------------------------------------
 
 const state = {
-  screen: 'setup',          // setup | handover | question | photo | reveal | pass | final
+  screen: 'front',          // front | setup | handover | question | photo | reveal | pass | final
+  overlay: null,            // null | 'rules' | 'confirmEnd'
   setup: { count: 2, names: [] },
   players: [],              // { name, score }
   turn: 0,                  // index of the current answerer
@@ -112,15 +166,17 @@ const state = {
   questions: [],            // this turn's ten words
   qIndex: 0,
   q: null,                  // state of the current question
+  history: [],              // snapshots of q before each tap this question (for undo)
   undo: null,               // snapshot from before the tap that ended the question
   result: null,             // { correct, points } for the reveal card
   usedIds: new Set(),       // words already drawn this game
+  tiebreak: null,           // see startTiebreak()
 };
 
 function newQuestion(word) {
   return word.pool === 'bonus'
-    ? { word, kind: 'bonus', phase: 'start', coldTried: false, note: null }
     // phase: start | guessing | coldWrong | sentence
+    ? { word, kind: 'bonus', phase: 'start', coldTried: false, note: null }
     : { word, kind: 'main', hints: 0, capped: false, note: null };
 }
 
@@ -141,6 +197,7 @@ function pointsAvailable(q) {
 const answerer = () => state.players[state.turn];
 const testerOf = turn => state.players[(turn + 1) % state.players.length];
 const isLastTurn = () => state.turn === state.players.length - 1;
+const inGame = () => !['front', 'setup', 'final'].includes(state.screen);
 
 // --- drawing words ----------------------------------------------------------
 
@@ -170,11 +227,18 @@ function drawTurn() {
     console.warn('Not enough distinct quotes for this turn; allowing a shared-quote word.');
     picked.push(skipped.shift());
   }
-  const bonus = shuffle(BONUS_POOL.filter(w => !state.usedIds.has(w.id)))[0];
+  const bonus = drawBonus();
   const turn = [...picked, bonus].filter(Boolean);
   turn.forEach(w => state.usedIds.add(w.id));
   return turn;
 }
+
+// A bonus word not yet drawn this game, or undefined if none are left.
+function drawBonus() {
+  return shuffle(BONUS_POOL.filter(w => !state.usedIds.has(w.id)))[0];
+}
+
+const bonusLeft = () => BONUS_POOL.filter(w => !state.usedIds.has(w.id)).length;
 
 // --- screen wake lock -------------------------------------------------------
 
@@ -194,8 +258,7 @@ async function keepAwake(on) {
 
 // The browser drops the lock when the page is hidden; take it back on return.
 document.addEventListener('visibilitychange', () => {
-  const inGame = !['setup', 'final'].includes(state.screen);
-  if (document.visibilityState === 'visible' && inGame) keepAwake(true);
+  if (document.visibilityState === 'visible' && inGame()) keepAwake(true);
 });
 
 // --- game flow --------------------------------------------------------------
@@ -203,6 +266,7 @@ document.addEventListener('visibilitychange', () => {
 function startGame(names) {
   state.players = names.map(name => ({ name, score: 0 }));
   state.usedIds = new Set();
+  state.tiebreak = null;
   state.turn = 0;
   keepAwake(true);
   startTurn();
@@ -213,13 +277,24 @@ function startTurn() {
   state.turnScore = 0;
   state.questions = drawTurn();
   state.qIndex = 0;
-  state.q = newQuestion(state.questions[0]);
+  setQuestion(state.questions[0]);
+}
+
+function setQuestion(word) {
+  state.q = newQuestion(word);
+  state.history = [];
   state.undo = null;
+}
+
+// Call before any tap that changes the question, so 'Oops, go back' can restore it.
+function remember() {
+  state.history.push(structuredClone(state.q));
 }
 
 function endQuestion(correct, points) {
   state.undo = {
     q: structuredClone(state.q),
+    history: state.history.slice(),
     turnScore: state.turnScore,
     score: answerer().score,
   };
@@ -229,25 +304,33 @@ function endQuestion(correct, points) {
   state.screen = 'reveal';
 }
 
-function undoLastTap() {
-  if (!state.undo) return;
-  state.q = state.undo.q;
-  state.turnScore = state.undo.turnScore;
-  answerer().score = state.undo.score;
+// Undo on the reveal card: back to the question as it was before the last tap.
+function undoReveal() {
+  const u = state.undo;
+  if (!u) return;
+  state.q = u.q;
+  state.history = u.history;
+  state.turnScore = u.turnScore;
+  answerer().score = u.score;
   state.undo = null;
   state.result = null;
   state.screen = 'question';
 }
 
+// Undo on the question screen: step back one tap.
+function undoTap() {
+  if (!state.history.length) return;
+  state.q = state.history.pop();
+}
+
 function nextQuestion() {
-  state.undo = null;
+  if (state.tiebreak) return nextTiebreakQuestion();
   state.qIndex++;
   if (state.qIndex < state.questions.length) {
-    state.q = newQuestion(state.questions[state.qIndex]);
+    setQuestion(state.questions[state.qIndex]);
     state.screen = 'question';
   } else if (isLastTurn()) {
-    keepAwake(false);
-    state.screen = 'final';
+    finishGame();
   } else {
     state.screen = 'pass';
   }
@@ -259,10 +342,83 @@ function beginNextTurn() {
   state.screen = 'question';
 }
 
+function finishGame() {
+  keepAwake(false);
+  state.screen = 'final';
+}
+
+function leaders(players) {
+  const top = Math.max(...players.map(p => p.score));
+  return players.filter(p => p.score === top);
+}
+
+// --- tiebreak ---------------------------------------------------------------
+// The tied players, in seating order, each answer one bonus word per round
+// (tester: the next player round the table, as usual). After each full round
+// whoever is ahead wins; anyone behind the leaders drops out; if the bonus
+// words can't cover another full round, it's a draw.
+
+function startTiebreak() {
+  state.tiebreak = {
+    contenders: leaders(state.players),
+    round: 0,
+    index: 0,
+    outcome: null,          // null | 'won' | 'draw'
+    stillLevel: false,
+  };
+  keepAwake(true);
+  startTiebreakRound();
+}
+
+function startTiebreakRound() {
+  const tb = state.tiebreak;
+  if (bonusLeft() < tb.contenders.length) {
+    tb.outcome = 'draw';
+    finishGame();
+    return;
+  }
+  tb.round++;
+  tb.index = 0;
+  queueTiebreakWord();
+}
+
+function queueTiebreakWord() {
+  const tb = state.tiebreak;
+  const word = drawBonus();
+  state.usedIds.add(word.id);
+  state.turn = state.players.indexOf(tb.contenders[tb.index]);
+  state.turnScore = 0;
+  setQuestion(word);
+  state.screen = 'pass';
+}
+
+function nextTiebreakQuestion() {
+  const tb = state.tiebreak;
+  tb.stillLevel = false;
+  if (tb.index < tb.contenders.length - 1) {
+    tb.index++;
+    queueTiebreakWord();
+    return;
+  }
+  // End of a round.
+  const ahead = leaders(tb.contenders);
+  if (ahead.length === 1) {
+    tb.outcome = 'won';
+    finishGame();
+    return;
+  }
+  tb.contenders = ahead;
+  tb.stillLevel = true;
+  startTiebreakRound();
+}
+
 // --- actions ----------------------------------------------------------------
 // Buttons carry data-action; one click handler dispatches here.
 
 const actions = {
+  frontStart() {
+    state.screen = 'setup';
+  },
   setCount(el) {
     state.setup.count = Number(el.dataset.value);
   },
@@ -280,7 +436,11 @@ const actions = {
   // Main-pool words
   hint() {
     const q = state.q;
-    if (q.hints >= LAST_RUNG) return;
+    if (q.hints >= LAST_RUNG) {           // photo already seen: show it again, points unchanged
+      state.screen = 'photo';
+      return;
+    }
+    remember();
     q.hints++;
     q.note = null;
     if (q.hints === LAST_RUNG) {
@@ -297,6 +457,7 @@ const actions = {
   mainWrong() {
     const q = state.q;
     if (q.hints < LAST_RUNG) {
+      remember();
       q.capped = true;
       q.note = UI.cappedNote;
     } else {
@@ -306,10 +467,12 @@ const actions = {
 
   // Bonus word
   bonusGuess() {
+    remember();
     state.q.phase = 'guessing';
     state.q.note = UI.bonusGuessingNote;
   },
   bonusSentence() {
+    remember();
     state.q.phase = 'sentence';
     state.q.note = UI.bonusSentenceNote;
   },
@@ -318,27 +481,50 @@ const actions = {
   },
   bonusWrong() {
     const q = state.q;
-    if (q.phase === 'guessing') {
+    if (q.phase === 'guessing' && q.word.exampleSentence) {
+      remember();
       q.coldTried = true;
-      if (q.word.exampleSentence) {
-        q.phase = 'coldWrong';
-        q.note = UI.bonusColdWrongNote;
-      } else {
-        endQuestion(false, 0); // no sentence to fall back on
-      }
+      q.phase = 'coldWrong';
+      q.note = UI.bonusColdWrongNote;
     } else {
-      endQuestion(false, 0);
+      endQuestion(false, 0);              // after the sentence, or no sentence to fall back on
     }
   },
 
-  undo: undoLastTap,
+  giveUp() {
+    endQuestion(false, 0);
+  },
+  undoTap,
+  undo: undoReveal,
   next: nextQuestion,
-  nextTurn: beginNextTurn,
+  nextTurn() {
+    if (state.tiebreak) state.screen = 'question';
+    else beginNextTurn();
+  },
+
   playAgain() {
     startGame(state.players.map(p => p.name));
   },
   newGame() {
+    state.tiebreak = null;
     state.screen = 'setup';
+  },
+  tiebreak: startTiebreak,
+
+  showRules() {
+    state.overlay = 'rules';
+  },
+  askEnd() {
+    state.overlay = 'confirmEnd';
+  },
+  closeOverlay() {
+    state.overlay = null;
+  },
+  confirmEnd() {
+    keepAwake(false);
+    state.overlay = null;
+    state.tiebreak = null;
+    state.screen = 'front';
   },
 };
 
@@ -348,9 +534,13 @@ function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
 
-function lowerFirst(s) {
-  // 'Utterly astonished' -> 'utterly astonished', but leave 'I', names and acronyms alone.
-  return /^[A-Z][a-z]/.test(s) && !/^I\b/.test(s) ? s[0].toLowerCase() + s.slice(1) : s;
+// 'Utterly astonished.' -> 'utterly astonished', 'A frivolous…' -> 'a frivolous…',
+// to follow '[Word] means'. Leaves 'I' and all-capital words (acronyms) alone.
+function asClause(s) {
+  const t = stripFullStop(s);
+  const first = t.split(/[\s;,]/)[0];
+  const lower = first === 'A' || /^[A-Z][a-z]/.test(first);
+  return lower ? t[0].toLowerCase() + t.slice(1) : t;
 }
 
 function stripFullStop(s) {
@@ -370,11 +560,19 @@ function button(action, label, cls = '', attrs = '') {
   return `<button type="button" class="btn ${cls}" data-action="${action}" ${attrs}>${esc(label)}</button>`;
 }
 
+function link(action, label, attrs = '') {
+  return `<button type="button" class="link" data-action="${action}" ${attrs}>${esc(label)}</button>`;
+}
+
 function badge(points, dark = false) {
   return `<div class="points${dark ? ' points--dark' : ''}" aria-label="${esc(UI.pointsAvailable)}: ${points}">
     <span class="points__label">${esc(UI.pointsAvailable)}</span>
     <span class="points__value">${points}</span>
   </div>`;
+}
+
+function paragraphs(list, cls = '') {
+  return list.map(p => `<p class="${cls}">${esc(p)}</p>`).join('');
 }
 
 function scoreList(players, highlight) {
@@ -385,7 +583,38 @@ function scoreList(players, highlight) {
     </li>`).join('')}</ol>`;
 }
 
+// Small controls under Correct / Wrong: Give up on the left, undo on the right.
+function minorControls() {
+  return `<div class="minor">
+    ${link('giveUp', UI.giveUp)}
+    ${link('undoTap', UI.undo, state.history.length ? '' : 'disabled')}
+  </div>`;
+}
+
 // --- screens ----------------------------------------------------------------
+
+function renderFront() {
+  const ways = Object.values(UI.gameTypes).map(t => `<li>${esc(t.name)}</li>`).join('');
+  return `<section class="screen front">
+    <div class="front__body">
+      <h1 class="display fit front__title">${esc(UI.title)}</h1>
+      <p class="front__tagline">${esc(UI.tagline)}</p>
+      <div class="prose">
+        ${paragraphs(UI.intro)}
+        <p>${esc(UI.waysToPlay)}</p>
+        <ul class="ways">${ways}</ul>
+      </div>
+    </div>
+    <div class="actions">${button('frontStart', UI.frontStart, 'btn--primary')}</div>
+  </section>`;
+}
+
+function renderHowToPlay(type) {
+  return `<div class="howto">
+    <h2 class="label">${esc(UI.howToPlay)}</h2>
+    <div class="prose">${paragraphs(UI.gameTypes[type].rules)}</div>
+  </div>`;
+}
 
 function renderSetup() {
   const s = state.setup;
@@ -415,14 +644,15 @@ function renderSetup() {
   }
 
   return `<section class="screen setup">
-    <header class="setup__head">
-      <h1 class="display setup__title">${esc(UI.title)}</h1>
-      <p class="setup__tagline">${esc(UI.tagline)}</p>
+    <header class="topbar">
+      <p class="topbar__title">${esc(UI.title)}</p>
+      ${link('showRules', UI.rulesLink)}
     </header>
     <div class="setup__body">
       <div class="setup__col">
         <h2 class="label">${esc(UI.gameTypeHeading)}</h2>
         <div class="types">${types}</div>
+        ${renderHowToPlay('define')}
       </div>
       <div class="setup__col">
         <h2 class="label">${esc(UI.playersHeading)}</h2>
@@ -432,7 +662,7 @@ function renderSetup() {
         <div class="names">${names.join('')}</div>
       </div>
     </div>
-    <div class="actions">${button('start', UI.start, 'btn--primary')}</div>
+    <div class="actions">${button('start', UI.startGame, 'btn--primary')}</div>
   </section>`;
 }
 
@@ -447,17 +677,24 @@ function renderHandover() {
   </section>`;
 }
 
+function metaLine() {
+  const tb = state.tiebreak;
+  return tb
+    ? UI.tiebreakMeta(answerer().name, tb.round)
+    : UI.testing(answerer().name, state.qIndex + 1, state.questions.length);
+}
+
 function renderMain() {
   const q = state.q;
   const w = q.word;
   const quoteOn = q.hints >= 1;
-  const hintLabel = q.hints === 0 ? UI.readQuote : q.hints === 1 ? UI.showPhoto : UI.photoShown;
+  const hintLabel = q.hints === 0 ? UI.readQuote : q.hints === 1 ? UI.showPhoto : UI.showPhotoAgain;
 
   return `<section class="screen turn">
-    <p class="turn__meta">${esc(UI.testing(answerer().name, state.qIndex + 1, state.questions.length))}</p>
+    <p class="turn__meta">${esc(metaLine())}</p>
     <div class="turn__grid">
       <div class="turn__word">
-        <h1 class="display word">${esc(w.word)}</h1>
+        <h1 class="display fit word">${esc(w.word)}</h1>
         ${badge(pointsAvailable(q))}
         ${q.note ? `<p class="note" role="status">${esc(q.note)}</p>` : ''}
       </div>
@@ -481,9 +718,10 @@ function renderMain() {
       </div>
     </div>
     <div class="actions actions--turn">
-      ${button('hint', hintLabel, 'btn--hint', q.hints >= LAST_RUNG ? 'disabled' : '')}
+      ${button('hint', hintLabel, 'btn--hint')}
       ${button('mainCorrect', UI.correct, 'btn--correct')}
       ${button('mainWrong', UI.wrong, 'btn--wrong')}
+      ${minorControls()}
     </div>
   </section>`;
 }
@@ -497,11 +735,11 @@ function renderBonus() {
   const canHear = hasSentence && (q.phase === 'start' || q.phase === 'coldWrong');
 
   return `<section class="screen turn turn--bonus">
-    <p class="turn__meta">${esc(UI.testing(answerer().name, state.qIndex + 1, state.questions.length))}</p>
+    <p class="turn__meta">${esc(metaLine())}</p>
     <div class="turn__grid">
       <div class="turn__word">
         <p class="bonus-badge">${esc(UI.bonusBadge)}</p>
-        <h1 class="display word">${esc(w.word)}</h1>
+        <h1 class="display fit word">${esc(w.word)}</h1>
         ${badge(pointsAvailable(q), true)}
         ${q.note ? `<p class="note" role="status">${esc(q.note)}</p>` : ''}
         ${sentenceOn ? `<figure class="invented">
@@ -524,6 +762,7 @@ function renderBonus() {
       ${judging
         ? button('bonusCorrect', UI.correct, 'btn--correct') + button('bonusWrong', UI.wrong, 'btn--wrong')
         : button('bonusGuess', UI.guess, 'btn--primary btn--span', q.phase === 'coldWrong' ? 'disabled' : '')}
+      ${minorControls()}
     </div>
   </section>`;
 }
@@ -542,41 +781,72 @@ function renderReveal() {
   const w = state.q.word;
   const r = state.result;
   const scene = w.pool === 'main' && w.sceneContext;
-  const last = state.qIndex === state.questions.length - 1 && isLastTurn();
+  const last = !state.tiebreak && state.qIndex === state.questions.length - 1 && isLastTurn();
   return `<section class="screen centre reveal ${r.correct ? 'reveal--right' : 'reveal--wrong'}">
     <div class="centre__body">
-      <h1 class="display reveal__line">${esc(r.correct ? UI.revealRight : UI.revealWrong(w.word, w.definition))}</h1>
+      <h1 class="reveal__line">${esc(r.correct ? UI.revealRight : UI.revealWrong(w.word, w.definition))}</h1>
+      ${r.correct ? `<p class="reveal__meaning">${esc(UI.revealMeaning(w.word, w.definition))}</p>` : ''}
       ${scene ? `<p class="reveal__scene">${esc(UI.revealScene(w.sceneContext))}</p>` : ''}
       <p class="reveal__pts">${esc(UI.pointsScored(r.points))}</p>
       <p class="reveal__total">${esc(UI.runningTotal(answerer().name, answerer().score))}</p>
     </div>
     <div class="actions">
       ${button('next', last ? UI.finish : UI.next, 'btn--primary')}
-      ${state.undo ? button('undo', UI.undo, 'btn--link') : ''}
+      ${state.undo ? link('undo', UI.undo) : ''}
     </div>
   </section>`;
 }
 
 function renderPass() {
-  const nextTurn = state.turn + 1;
-  const nextAnswerer = state.players[nextTurn];
-  const nextTester = testerOf(nextTurn);
+  const tb = state.tiebreak;
+  let tester, lead, board, note;
+  if (tb) {
+    // Tiebreak: the question is already queued for the next contender.
+    tester = testerOf(state.turn);
+    lead = tb.stillLevel ? UI.tiebreakStillLevel(tb.contenders.map(p => p.name)) : UI.tiebreakRound(tb.round);
+    board = scoreList(tb.contenders, answerer());
+    note = UI.nextTurnNote(answerer().name, tester.name);
+  } else {
+    const nextTurn = state.turn + 1;
+    tester = testerOf(nextTurn);
+    lead = UI.turnScored(answerer().name, state.turnScore);
+    board = scoreList(state.players, answerer());
+    note = UI.nextTurnNote(state.players[nextTurn].name, tester.name);
+  }
   return `<section class="screen centre">
     <div class="centre__body">
-      <h1 class="display handover__title">${esc(UI.passTo(nextTester.name))}</h1>
-      <p class="lead">${esc(UI.turnScored(answerer().name, state.turnScore))}</p>
-      ${scoreList(state.players, answerer())}
-      <p class="hint-text">${esc(UI.nextTurnNote(nextAnswerer.name, nextTester.name))}</p>
+      <h1 class="display handover__title">${esc(UI.passTo(tester.name))}</h1>
+      <p class="lead">${esc(lead)}</p>
+      ${board}
+      <p class="hint-text">${esc(note)}</p>
     </div>
-    <div class="actions">${button('nextTurn', UI.ready(nextTester.name), 'btn--primary')}</div>
+    <div class="actions">
+      ${button('nextTurn', UI.ready(tester.name), 'btn--primary')}
+      <div class="minor">${link('showRules', UI.rulesLink)}${link('askEnd', UI.endGame)}</div>
+    </div>
   </section>`;
 }
 
 function renderFinal() {
+  const tb = state.tiebreak;
   const ranked = state.players.slice().sort((a, b) => b.score - a.score);
   const top = ranked[0].score;
-  const leaders = ranked.filter(p => p.score === top);
-  const tied = leaders.length > 1;
+  const level = leaders(state.players);
+
+  let title, lead = '';
+  if (tb && tb.outcome === 'won') {
+    title = UI.winner(level[0].name);
+    lead = UI.wonOnTiebreak;
+  } else if (tb && tb.outcome === 'draw') {
+    title = UI.draw;
+    lead = UI.drawNote(tb.contenders.map(p => p.name));
+  } else if (level.length > 1) {
+    title = UI.tied;
+    lead = UI.tiedNames(level.map(p => p.name), top);
+  } else {
+    title = UI.winner(level[0].name);
+  }
+  const offerTiebreak = !tb && level.length > 1;
 
   let rank = 0;
   const rows = ranked.map((p, i) => {
@@ -591,20 +861,53 @@ function renderFinal() {
   return `<section class="screen centre final">
     <div class="centre__body">
       <p class="label">${esc(UI.finalHeading)}</p>
-      <h1 class="display final__title">${esc(tied ? UI.tied : UI.winner(leaders[0].name))}</h1>
-      ${tied ? `<p class="lead">${esc(UI.tiedNames(leaders.map(p => p.name), top))}</p>` : ''}
+      <h1 class="display fit final__title">${esc(title)}</h1>
+      ${lead ? `<p class="lead">${esc(lead)}</p>` : ''}
       <ol class="final__list">${rows}</ol>
+      ${offerTiebreak ? `<p class="hint-text">${esc(UI.tiebreakNote)}</p>` : ''}
     </div>
     <div class="actions">
-      ${button('playAgain', UI.playAgain, 'btn--primary')}
+      ${offerTiebreak ? button('tiebreak', UI.tiebreak, 'btn--primary') : ''}
+      ${button('playAgain', UI.playAgain, offerTiebreak ? 'btn--secondary' : 'btn--primary')}
       ${button('newGame', UI.newGame, 'btn--secondary')}
+      <div class="minor minor--centre">${link('askEnd', UI.endGame)}</div>
     </div>
   </section>`;
 }
 
+function renderRulesOverlay() {
+  const types = Object.entries(UI.gameTypes).map(([key, t]) => `
+    <h3 class="rules__type">${esc(t.name)}</h3>
+    <div class="prose">${paragraphs(t.rules)}</div>`).join('');
+  return `<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="rules-title">
+    <div class="overlay__card overlay__card--rules">
+      <div class="overlay__scroll">
+        <h1 class="display fit front__title" id="rules-title">${esc(UI.title)}</h1>
+        <p class="front__tagline">${esc(UI.tagline)}</p>
+        <div class="prose">${paragraphs(UI.intro)}</div>
+        <h2 class="label">${esc(UI.howToPlay)}</h2>
+        ${types}
+      </div>
+      <div class="overlay__actions">${button('closeOverlay', UI.close, 'btn--primary')}</div>
+    </div>
+  </div>`;
+}
+
+function renderConfirmEnd() {
+  return `<div class="overlay" role="alertdialog" aria-modal="true" aria-labelledby="end-title">
+    <div class="overlay__card overlay__card--small">
+      <p class="overlay__message" id="end-title">${esc(UI.endConfirm)}</p>
+      <div class="overlay__actions">
+        ${button('confirmEnd', UI.endYes, 'btn--primary')}
+        ${button('closeOverlay', UI.endNo, 'btn--secondary')}
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderNoData() {
   return `<section class="screen centre"><div class="centre__body">
-    <h1 class="display">${esc(UI.title)}</h1><p class="lead">${esc(UI.noData)}</p>
+    <h1 class="display fit">${esc(UI.title)}</h1><p class="lead">${esc(UI.noData)}</p>
   </div></section>`;
 }
 
@@ -618,6 +921,7 @@ function render() {
   let theme = 'light';
   if (!DATA || PLAYER_LIMIT < MIN_PLAYERS) html = renderNoData();
   else switch (state.screen) {
+    case 'front': html = renderFront(); break;
     case 'setup': html = renderSetup(); break;
     case 'handover': html = renderHandover(); break;
     case 'question':
@@ -629,38 +933,44 @@ function render() {
     case 'pass': html = renderPass(); break;
     case 'final': html = renderFinal(); break;
   }
-  document.body.dataset.theme = theme;
-  app.innerHTML = html;
+  if (state.overlay === 'rules') html += renderRulesOverlay();
+  if (state.overlay === 'confirmEnd') html += renderConfirmEnd();
 
-  fitWord();
+  document.body.dataset.theme = theme;
+  document.body.classList.toggle('has-overlay', Boolean(state.overlay));
+  app.innerHTML = html;
+  fitAll();
 
   // Start each new screen or question at the top.
-  const key = `${state.screen}:${state.turn}:${state.qIndex}`;
+  const key = `${state.screen}:${state.turn}:${state.qIndex}:${state.q && state.q.word.id}`;
   if (key !== lastScreenKey) window.scrollTo(0, 0);
   lastScreenKey = key;
 }
 
-// Keep the headline word on one line: shrink it only if it would overflow its
-// column. Words are never split; below MIN_WORD_PX it is allowed to wrap.
-const MIN_WORD_PX = 32;
+// Keep headline text (title, word) on one line: shrink only if it would
+// overflow its column. Words are never split; below MIN_FIT_PX it may wrap.
+const MIN_FIT_PX = 28;
 
-function fitWord() {
-  const el = app.querySelector('.word');
-  if (!el) return;
+function fit(el) {
   el.style.fontSize = '';
-  el.classList.remove('word--wrap');
+  el.classList.remove('fit--wrap');
   const size = parseFloat(getComputedStyle(el).fontSize);
-  const available = el.parentElement.clientWidth;
+  const box = getComputedStyle(el.parentElement);
+  const available = el.parentElement.clientWidth - parseFloat(box.paddingLeft) - parseFloat(box.paddingRight);
   if (el.scrollWidth <= available) return;
   const fitted = Math.floor(size * available / el.scrollWidth);
-  if (fitted >= MIN_WORD_PX) el.style.fontSize = fitted + 'px';
-  else { el.style.fontSize = MIN_WORD_PX + 'px'; el.classList.add('word--wrap'); }
+  if (fitted >= MIN_FIT_PX) el.style.fontSize = fitted + 'px';
+  else { el.style.fontSize = MIN_FIT_PX + 'px'; el.classList.add('fit--wrap'); }
 }
 
-window.addEventListener('resize', fitWord);
-if (document.fonts) document.fonts.ready.then(fitWord);
+function fitAll() {
+  document.querySelectorAll('.fit').forEach(fit);
+}
 
-app.addEventListener('click', e => {
+window.addEventListener('resize', fitAll);
+if (document.fonts) document.fonts.ready.then(fitAll);
+
+document.addEventListener('click', e => {
   const el = e.target.closest('[data-action]');
   if (!el || el.disabled || !actions[el.dataset.action]) return;
   actions[el.dataset.action](el);
@@ -679,6 +989,11 @@ app.addEventListener('keydown', e => {
   const next = app.querySelector(`[data-name="${Number(e.target.dataset.name) + 1}"]`);
   if (next) next.focus();
   else { actions.start(); render(); }
+});
+
+// Escape closes an overlay.
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && state.overlay) { state.overlay = null; render(); }
 });
 
 render();
