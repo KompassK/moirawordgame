@@ -194,7 +194,7 @@ Options 2 and 3 draw only from words with an Option 1 history on this device, an
 
 0. **Project setup** (CLAUDE.md, build script, `words.json`, placeholder `index.html`). ← done
 1. **Option 1 playable slice on dummy data**: setup, turns, hint ladder, bonus word, reveal card, pass-the-device, scoreboard, placeholder still. ← done
-2. **Rename to Sesquipedalian, restyle, answers to open questions**: front card with the way-to-play boxes, How to play screen with players and names, rules overlay, 2–4 players for every way to play (no solo mode), black/white/grey palette, self-hosted Josefin Sans, Give up, undo on the turn screen, re-show photo, definition on a correct reveal, tiebreak, End game. ← done
+2. **Rename to Sesquipedalian, restyle, answers to open questions**: front card with the way-to-play boxes, How to play screen with players and names, rules overlay, 2–4 players for every way to play (no solo mode), black/white/grey palette, self-hosted Josefin Sans, Give up, undo on the turn screen, re-show photo, definition on a correct reveal, tiebreak, End game. Follow-up refinements: game name as the How to play screen's title, intro trimmed and 'Highest score wins.' added, Give up as a pass in all three rules texts, 10-question turns for Options 2 and 3. ← **done** (step 2 complete; next is step 3)
 3. Persistent no-repeat tracking and the Option 2/3 unlock.
 4. Options 2 and 3.
 5. Real images and the quote-overlay rule.
