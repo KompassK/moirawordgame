@@ -23,6 +23,7 @@ const UI = {
     define: {
       name: 'Define the word',
       blurb: 'Say what the word means. Hints cost points.',
+      players: '2–⁠4 players.', // ⁠ (word joiner) keeps '2–4' on one line
       rules: [
         'Everyone takes a turn to be asked to define 10 words. The player on your left holds the phone and reads out the words for you to define: nine from the show’s dialogue and one Catherine O’Hara loquacity masterclass as a bonus. Once everyone has had a turn, that’s the end of the round. Highest scorer wins.',
         'For each word, say what it means. Guess it cold for 4 points. You can ask to hear the full quote – but if you do, your score will drop to 3 points. Ask to see a photo of the scene with the quote and the score drops to 2. A wrong guess always drops your possible points for that word to 1, but you can keep going with hints and get the point if you get it right. Any real meaning of the word counts, including the one Moira had in mind.',
@@ -33,6 +34,7 @@ const UI = {
     blank: {
       name: 'Fill in the blank',
       blurb: 'Supply the missing word from the quote.',
+      players: '1–⁠4 players.',
       rules: [
         'Everyone takes a turn. The player on your left holds the phone and reads out a line from the show with one word missing. Say the missing word.',
         'One guess, no hints: 1 point for each right answer. Once everyone has had a turn, that’s the end of the round. Highest scorer wins.',
@@ -43,6 +45,7 @@ const UI = {
     episode: {
       name: 'Name the episode',
       blurb: 'Which season and episode is the quote from?',
+      players: '1–⁠4 players.',
       rules: [
         'Everyone takes a turn. The player on your left holds the phone, reads out a quote from the show and shows you the photo of the scene if there is one. Name the season, then the episode.',
         'The right season scores 1 point; get the episode right too and it’s 3. A wrong season scores nothing. Once everyone has had a turn, that’s the end of the round. Highest scorer wins.',
@@ -50,8 +53,8 @@ const UI = {
       ],
     },
   },
-  gameTypeHeading: 'Way to play',
   lockedNote: 'Play a Define the word game first to unlock this mode',
+  back: '‹ Back',
   playersHeading: 'Number of players',
   namesHeading: 'Names, in seating order (clockwise)',
   defaultName: n => `Player ${n}`,
@@ -133,8 +136,15 @@ const UI = {
 
 const MAIN_PER_TURN = 9;
 const QUESTIONS_PER_TURN = MAIN_PER_TURN + 1; // plus the bonus word, always last
-const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 4; // one family of four
+// Fewest players per way to play: Define the word needs a tester and an
+// answerer; the other two can be played solo.
+const MIN_PLAYERS = { define: 2, blank: 1, episode: 1 };
+
+// Options 2 and 3 unlock in step 3; until then only Define the word is open.
+function isUnlocked(type) {
+  return type === 'define';
+}
 const PLACEHOLDER_STILL = './assets/placeholder.svg';
 
 // Main-pool hint ladder: points for a right answer after 0, 1 or 2 hints.
@@ -159,7 +169,7 @@ const PLAYER_LIMIT = Math.min(MAX_PLAYERS, Math.floor(MAIN.length / MAIN_PER_TUR
 const state = {
   screen: 'front',          // front | setup | handover | question | photo | reveal | pass | final
   overlay: null,            // null | 'rules' | 'confirmEnd'
-  setup: { count: 2, names: [] },
+  setup: { type: 'define', count: 2, names: [] },
   players: [],              // { name, score }
   turn: 0,                  // index of the current answerer
   turnScore: 0,
@@ -416,8 +426,14 @@ function nextTiebreakQuestion() {
 // Buttons carry data-action; one click handler dispatches here.
 
 const actions = {
+  selectType(el) {
+    if (isUnlocked(el.dataset.value)) state.setup.type = el.dataset.value;
+  },
   frontStart() {
     state.screen = 'setup';
+  },
+  back() {
+    state.screen = 'front';
   },
   setCount(el) {
     state.setup.count = Number(el.dataset.value);
@@ -593,8 +609,22 @@ function minorControls() {
 
 // --- screens ----------------------------------------------------------------
 
+// The three ways to play as selectable boxes. Locked ones show only the lock
+// note; unlocked ones show their tag line and player range.
+function renderTypes() {
+  return Object.entries(UI.gameTypes).map(([key, t]) => {
+    const open = isUnlocked(key);
+    const on = key === state.setup.type;
+    const cls = !open ? ' type--locked' : on ? ' type--on' : '';
+    return `<button type="button" class="type${cls}" data-action="selectType" data-value="${key}"
+      ${open ? `aria-pressed="${on}"` : 'disabled'}>
+      <span class="type__name">${esc(t.name)}</span>
+      <span class="type__blurb">${esc(open ? `${t.blurb} ${t.players}` : UI.lockedNote)}</span>
+    </button>`;
+  }).join('');
+}
+
 function renderFront() {
-  const ways = Object.values(UI.gameTypes).map(t => `<li>${esc(t.name)}</li>`).join('');
   return `<section class="screen front">
     <div class="front__body">
       <h1 class="display fit front__title">${esc(UI.title)}</h1>
@@ -602,34 +632,28 @@ function renderFront() {
       <div class="prose">
         ${paragraphs(UI.intro)}
         <p>${esc(UI.waysToPlay)}</p>
-        <ul class="ways">${ways}</ul>
       </div>
+      <div class="types" role="group" aria-label="${esc(UI.waysToPlay)}">${renderTypes()}</div>
     </div>
     <div class="actions">${button('frontStart', UI.frontStart, 'btn--primary')}</div>
   </section>`;
 }
 
-function renderHowToPlay(type) {
-  return `<div class="howto">
-    <h2 class="label">${esc(UI.howToPlay)}</h2>
-    <div class="prose">${paragraphs(UI.gameTypes[type].rules)}</div>
-  </div>`;
+// Most players the chosen way to play allows. Define the word is also capped
+// by the word list (nine main words and one bonus word per player, no repeats).
+function playerLimit(type) {
+  return type === 'define' ? PLAYER_LIMIT : MAX_PLAYERS;
 }
 
 function renderSetup() {
   const s = state.setup;
-  s.count = Math.min(s.count, Math.max(PLAYER_LIMIT, MIN_PLAYERS));
-  const types = Object.entries(UI.gameTypes).map(([key, t]) => {
-    const on = key === 'define';
-    return `<div class="type${on ? ' type--on' : ' type--locked'}" ${on ? 'aria-current="true"' : 'aria-disabled="true"'}>
-      <span class="type__name">${esc(t.name)}</span>
-      <span class="type__blurb">${esc(on ? t.blurb : UI.lockedNote)}</span>
-    </div>`;
-  }).join('');
+  const min = MIN_PLAYERS[s.type];
+  const max = playerLimit(s.type);
+  s.count = Math.min(Math.max(s.count, min), Math.max(max, min));
 
   const counts = [];
-  for (let n = MIN_PLAYERS; n <= MAX_PLAYERS; n++) {
-    const disabled = n > PLAYER_LIMIT;
+  for (let n = min; n <= MAX_PLAYERS; n++) {
+    const disabled = n > max;
     counts.push(`<button type="button" class="seg${n === s.count ? ' seg--on' : ''}" data-action="setCount" data-value="${n}"
       ${disabled ? 'disabled' : ''} aria-pressed="${n === s.count}">${n}</button>`);
   }
@@ -645,19 +669,19 @@ function renderSetup() {
 
   return `<section class="screen setup">
     <header class="topbar">
-      <p class="topbar__title">${esc(UI.title)}</p>
+      ${link('back', UI.back)}
       ${link('showRules', UI.rulesLink)}
     </header>
+    <h1 class="display setup__title">${esc(UI.howToPlay)}</h1>
+    <p class="setup__type">${esc(UI.gameTypes[s.type].name)}</p>
     <div class="setup__body">
       <div class="setup__col">
-        <h2 class="label">${esc(UI.gameTypeHeading)}</h2>
-        <div class="types">${types}</div>
-        ${renderHowToPlay('define')}
+        <div class="prose">${paragraphs(UI.gameTypes[s.type].rules)}</div>
       </div>
       <div class="setup__col">
         <h2 class="label">${esc(UI.playersHeading)}</h2>
-        <div class="segs" role="group">${counts.join('')}</div>
-        ${PLAYER_LIMIT < MAX_PLAYERS ? `<p class="hint-text">${esc(UI.notEnoughWords(PLAYER_LIMIT))}</p>` : ''}
+        <div class="segs segs--${MAX_PLAYERS - min + 1}" role="group">${counts.join('')}</div>
+        ${max < MAX_PLAYERS ? `<p class="hint-text">${esc(UI.notEnoughWords(max))}</p>` : ''}
         <h2 class="label">${esc(UI.namesHeading)}</h2>
         <div class="names">${names.join('')}</div>
       </div>
@@ -919,7 +943,7 @@ let lastScreenKey = '';
 function render() {
   let html;
   let theme = 'light';
-  if (!DATA || PLAYER_LIMIT < MIN_PLAYERS) html = renderNoData();
+  if (!DATA || PLAYER_LIMIT < MIN_PLAYERS.define) html = renderNoData();
   else switch (state.screen) {
     case 'front': html = renderFront(); break;
     case 'setup': html = renderSetup(); break;
