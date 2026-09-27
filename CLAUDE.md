@@ -85,7 +85,7 @@ All other columns are ignored. `Bonus point available? (Y/N)` is retired; do not
 
 ### Front card
 - The title 'Sesquipedalian', large; the line 'A Moira Rose vocabulary game'; then this intro, **word for word** (in `UI.intro`):
-  > We all love Moira Rose but it's fair to say she was a sesquipedalian (that's someone who uses too many long words). Still we can all learn from her wonderful use of words. The aim of this game is to test our knowledge and understanding of her vocabulary. Highest score wins.
+  > We all love Moira Rose but it's fair to say she was a sesquipedalian. Still we can all learn from her wonderful use of words. The aim of this game is to test our knowledge and understanding of her vocabulary. Highest score wins.
 - Then 'There are three ways to play:' and the **three way-to-play boxes**, where the way to play is chosen:
   - **Define the word** – 'Say what the word means. Hints cost points. 2–4 players.'
   - **Fill in the blank** – 'Supply the missing word from the quote. 2–4 players.'
@@ -138,7 +138,7 @@ The tester's screen, top to bottom: 'Testing: [answerer] · Question n of 10'; t
 - **Correct** scores whatever the badge shows and goes to the reveal card.
 - **Wrong before the last hint** drops the badge to 1 for good ('Not quite. This question is now worth 1 point – keep going.'). The answerer can keep guessing at 1 point as long as they like (intended); later hints don't change the badge.
 - **Wrong after the photo** scores 0 and goes to the reveal card. So: eventually right → 1; never right → 0.
-- **Give up** (small, under Wrong) is a **pass**: 0 points for that word at any point, then the reveal card and on to the next word. It never draws a replacement – every turn is still exactly 10 words. Give up exists in all three ways to play.
+- **Give up** (small, under Wrong) is a **pass**: 0 points for that word at any point, **straight to the reveal card**, then Next moves on. It never draws a replacement – every turn is still exactly 10 words. It **can be undone** with 'Oops, go back' on the reveal card. Give up exists in all three ways to play. (Keeping the screen hidden from the answerer, except for scene photos, is the tester's job, not the app's.)
 - **Oops, go back** (small, under Wrong) undoes the last tap on this question – a hint, a mis-tapped Wrong, anything – as many steps back as the question has had taps. It restores the question exactly, including the badge and the dimming. It is disabled before the first tap. Opening the photo again is not a tap that needs undoing.
 - Judging: the definition is visible to the tester throughout; the table agrees and the tester taps Correct or Wrong. Any sense of the word counts: if `twist` is present, either meaning scores the full ladder value. No extra point for a second meaning.
 
@@ -205,9 +205,9 @@ One step per session. Test in a browser before committing: open `index.html` dir
 
 ## Open questions
 
-1. **Does Give up skip the reveal card?** Give up is a pass. At the moment it still shows the reveal card ('Sorry, that's not right – [Word] means …', the scene line, 'No points'), and Next moves on. So the table hears the answer, and a mis-tapped Give up can be undone. Keep it like that, or should Give up go straight to the next word?
+None at present.
 
-*Resolved in step 2: tiebreak drop-out (yes); tiebreak reuses earlier games' bonus words from step 3 (yes); Options 2 and 3 are turns of 10 questions; Give up is in all three ways to play and in all three rules texts.*
+*Resolved in step 2: tiebreak drop-out (yes); tiebreak reuses earlier games' bonus words from step 3 (yes); Options 2 and 3 are turns of 10 questions; Give up is in all three ways to play and in all three rules texts, goes straight to the reveal card and can be undone.*
 
 ## Conventions
 
