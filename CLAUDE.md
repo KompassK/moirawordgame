@@ -85,7 +85,7 @@ All other columns are ignored. `Bonus point available? (Y/N)` is retired; do not
 
 ### Front card
 - The title 'Sesquipedalian', large; the line 'A Moira Rose vocabulary game'; then this intro, **word for word** (in `UI.intro`):
-  > We all love Moira Rose but it's fair to say she was a sesquipedalian (that's someone who uses too many long words). Still we can all learn from her wonderful use of words. The aim of this game is to test our knowledge and understanding of her vocabulary.
+  > We all love Moira Rose but it's fair to say she was a sesquipedalian (that's someone who uses too many long words). Still we can all learn from her wonderful use of words. The aim of this game is to test our knowledge and understanding of her vocabulary. Highest score wins.
 - Then 'There are three ways to play:' and the **three way-to-play boxes**, where the way to play is chosen:
   - **Define the word** – 'Say what the word means. Hints cost points. 2–4 players.'
   - **Fill in the blank** – 'Supply the missing word from the quote. 2–4 players.'

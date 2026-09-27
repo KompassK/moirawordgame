@@ -13,7 +13,7 @@ const UI = {
 
   // Front card. The intro wording is fixed; keep it as written.
   intro: [
-    'We all love Moira Rose but it’s fair to say she was a sesquipedalian (that’s someone who uses too many long words). Still we can all learn from her wonderful use of words. The aim of this game is to test our knowledge and understanding of her vocabulary.',
+    'We all love Moira Rose but it’s fair to say she was a sesquipedalian (that’s someone who uses too many long words). Still we can all learn from her wonderful use of words. The aim of this game is to test our knowledge and understanding of her vocabulary. Highest score wins.',
   ],
   waysToPlay: 'There are three ways to play:',
   frontStart: 'Start',
