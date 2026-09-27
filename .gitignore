@@ -1,0 +1,7 @@
+node_modules/
+
+# Excel lock files, created while the spreadsheet is open
+~$*
+
+.DS_Store
+Thumbs.db

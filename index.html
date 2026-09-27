@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Moira Words</title>
+  <!-- PWA hook: manifest link and theme-color go here in a later step -->
+</head>
+<body>
+  <h1>Moira Words – coming soon</h1>
+
+  <script>
+    // Data-path check: confirms words.json loads (locally and on GitHub Pages).
+    fetch('./words.json')
+      .then(res => {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(data => {
+        const count = pool => data.words.filter(w => w.pool === pool).length;
+        console.log('words.json loaded:', count('main'), 'main,', count('bonus'), 'bonus (from ' + data.source + ', built ' + data.generatedAt + ')');
+      })
+      .catch(err => {
+        console.error('Could not load words.json:', err);
+      });
+
+    // PWA hook: service-worker registration goes here in a later step.
+  </script>
+</body>
+</html>

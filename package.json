@@ -1,0 +1,12 @@
+{
+  "name": "moira-words",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Moira Words: a pass-the-phone family vocabulary quiz.",
+  "scripts": {
+    "build": "node scripts/build-words.js"
+  },
+  "dependencies": {
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  }
+}
