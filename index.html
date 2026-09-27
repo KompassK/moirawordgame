@@ -2,29 +2,22 @@
 <html lang="en-GB">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f6f1e7">
   <title>Moira Words</title>
-  <!-- PWA hook: manifest link and theme-color go here in a later step -->
+  <!-- PWA hook: manifest link goes here in a later step -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&display=swap">
+  <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <h1>Moira Words – coming soon</h1>
+  <main id="app" aria-live="polite"></main>
 
-  <script>
-    // Data-path check: confirms words.json loads (locally and on GitHub Pages).
-    fetch('./words.json')
-      .then(res => {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
-      .then(data => {
-        const count = pool => data.words.filter(w => w.pool === pool).length;
-        console.log('words.json loaded:', count('main'), 'main,', count('bonus'), 'bonus (from ' + data.source + ', built ' + data.generatedAt + ')');
-      })
-      .catch(err => {
-        console.error('Could not load words.json:', err);
-      });
+  <noscript>Moira Words needs JavaScript switched on.</noscript>
 
-    // PWA hook: service-worker registration goes here in a later step.
-  </script>
+  <script src="./words.js"></script>
+  <script src="./game.js"></script>
+  <!-- PWA hook: service-worker registration goes here in a later step -->
 </body>
 </html>
