@@ -101,9 +101,10 @@ A small **Rules** link on the How to play screen and on the pass-the-device scre
 1. Everyone takes a turn to be asked to define 10 words. The player on your left holds the phone and reads out the words for you to define: nine from the show's dialogue and one Catherine O'Hara loquacity masterclass as a bonus. Once everyone has had a turn, that's the end of the round. Highest scorer wins.
 2. For each word, say what it means. Guess it cold for 4 points. You can ask to hear the full quote – but if you do, your score will drop to 3 points. Ask to see a photo of the scene with the quote and the score drops to 2. A wrong guess always drops your possible points for that word to 1, but you can keep going with hints and get the point if you get it right. Any real meaning of the word counts, including the one Moira had in mind.
 3. The bonus word has no quote. Guess it cold for 5 points, or hear it in an invented sentence first for 3. Guess wrong, then hear the sentence and get it right, for 2.
-4. The asker judges. Adults decide what's close enough.
+4. Stuck? You can give up on any word at any time. It counts as a pass: no points for that word, and you move on to the next one. You still get 10 words in all. *(Added in step 2 at Katharine's request.)*
+5. The asker judges. Adults decide what's close enough.
 
-**Fill in the blank** and **Name the episode** – drafted in the same voice from the rules below; to be confirmed (see Open questions).
+**Fill in the blank** and **Name the episode** – drafted in the same voice from the rules below and agreed: each says 'Everyone takes a turn of 10 questions' and includes the Give up / pass line.
 
 ### How to play (the second screen: set-up)
 - A top bar with **‹ Back** (to the front card, to change the way to play) and **Rules**.
@@ -137,7 +138,7 @@ The tester's screen, top to bottom: 'Testing: [answerer] · Question n of 10'; t
 - **Correct** scores whatever the badge shows and goes to the reveal card.
 - **Wrong before the last hint** drops the badge to 1 for good ('Not quite. This question is now worth 1 point – keep going.'). The answerer can keep guessing at 1 point as long as they like (intended); later hints don't change the badge.
 - **Wrong after the photo** scores 0 and goes to the reveal card. So: eventually right → 1; never right → 0.
-- **Give up** (small, under Wrong) scores 0 at any point and goes to the reveal card.
+- **Give up** (small, under Wrong) is a **pass**: 0 points for that word at any point, then the reveal card and on to the next word. It never draws a replacement – every turn is still exactly 10 words. Give up exists in all three ways to play.
 - **Oops, go back** (small, under Wrong) undoes the last tap on this question – a hint, a mis-tapped Wrong, anything – as many steps back as the question has had taps. It restores the question exactly, including the badge and the dimming. It is disabled before the first tap. Opening the photo again is not a tap that needs undoing.
 - Judging: the definition is visible to the tester throughout; the table agrees and the tester taps Correct or Wrong. Any sense of the word counts: if `twist` is present, either meaning scores the full ladder value. No extra point for a second meaning.
 
@@ -168,18 +169,18 @@ The tester's screen, top to bottom: 'Testing: [answerer] · Question n of 10'; t
 
 ### Tiebreak
 - Offered when the top score is shared. The tied players, in seating order, each answer one Catherine O'Hara bonus word per round, scored exactly as a normal bonus word and added to their totals. The tester is the next player round the table, as usual, with a pass-the-device screen before each word ('Tiebreak – round n', the tied players' scores).
-- Words: bonus words not yet drawn in this game, at random. (From step 3, prefer words never asked on this device.)
-- After each full round, if one player is ahead, they win ('[Name] wins!', 'Won on the tiebreak'). If not, anyone behind the leaders drops out ('Still level: A and B. Another round.') and the leaders play another round.
+- Words: bonus words not yet drawn in this game, at random. **From step 3:** prefer words never asked on this device, then **reuse** bonus words asked in earlier games; only words already drawn in *this* game are off limits. (Until step 3 nothing is remembered between games, so every word not drawn this game is available anyway.)
+- After each full round, if one player is ahead, they win ('[Name] wins!', 'Won on the tiebreak'). If not, anyone behind the leaders drops out ('Still level: A and B. Another round.') and the leaders play another round. (Drop-out confirmed by Katharine.)
 - If there aren't enough unused bonus words for every remaining player to have one in the next round, it's a **Draw** ('The bonus words have run out, so it's a draw between A and B.').
 
 ### End game
 A small **End game** link on the pass-the-device screen and the final scoreboard. It asks 'End this game? Scores will be lost.' – **End game** (black) or **Keep playing** (or Escape) – and returns to the front card.
 
 ### Option 2 – Fill in the blank (step 4)
-Tester sees the quote with the word blanked and reads it aloud; answerer supplies the word. 1 point, one guess, no hints.
+Same turn structure as Option 1: each player has one turn of **10 questions**, the tester is the player to their left, everyone has a turn, then the round (and game) ends. 2–4 players. Tester sees the quote with the word blanked and reads it aloud; answerer supplies the word. 1 point, one guess, no hints. Give up = pass (0, next question).
 
 ### Option 3 – Name the episode (step 4)
-Tester reads the quote (and shows the photo if there is one); answerer names the season, then the episode. Season right → 1; season and episode right → 3; season wrong → 0.
+Same turn structure: one turn of **10 questions** per player, everyone has a turn, then the round ends. 2–4 players. Tester reads the quote (and shows the photo if there is one); answerer names the season, then the episode. Season right → 1; season and episode right → 3; season wrong → 0. Give up = pass (0, next question).
 
 ### No-repeat tracking (step 3)
 - `localStorage` records, per word, whether it has ever been asked in an Option 1 turn on this device.
@@ -204,10 +205,9 @@ One step per session. Test in a browser before committing: open `index.html` dir
 
 ## Open questions
 
-1. **Tiebreak with three or more tied.** After a round, players behind the leaders drop out and only the leaders play on. Is that right, or should everyone who was tied keep playing until one player is ahead of all the others?
-2. **When the tiebreak runs out.** A draw is declared when there aren't enough unused bonus words for a *whole* round, so a round is never played partly. Once step 3 tracks words across games, should the tiebreak reuse bonus words from earlier games before declaring a draw, or only use words not drawn in this game (as now)?
-3. **How to play for Options 2 and 3.** The texts are drafts in your voice (in `UI.gameTypes.blank.rules` and `.episode.rules`). Please check the wording, and say how many words a turn has in each (not yet defined), so the text can say so.
-4. **Give up in the rules text.** The Define the word how-to-play doesn't mention Give up. Add a line such as 'You can give up on a word at any time, for no points.'?
+1. **Does Give up skip the reveal card?** Give up is a pass. At the moment it still shows the reveal card ('Sorry, that's not right – [Word] means …', the scene line, 'No points'), and Next moves on. So the table hears the answer, and a mis-tapped Give up can be undone. Keep it like that, or should Give up go straight to the next word?
+
+*Resolved in step 2: tiebreak drop-out (yes); tiebreak reuses earlier games' bonus words from step 3 (yes); Options 2 and 3 are turns of 10 questions; Give up is in all three ways to play and in all three rules texts.*
 
 ## Conventions
 
