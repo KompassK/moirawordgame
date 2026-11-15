@@ -20,7 +20,7 @@ const OUT_FILE = path.join(ROOT, 'words.json');
 const OUT_JS = path.join(ROOT, 'words.js');
 const VERSION_JS = path.join(ROOT, 'version.js');
 // Generated files never count as 'uncommitted changes' for the version stamp.
-const GENERATED = ['words.json', 'words.js', 'version.js'];
+const GENERATED = ['words.json', 'words.js', 'version.js', 'sw.js'];
 const SHEET_NAME = 'Words';
 
 // Column header (exact) -> JSON field. Every other column is ignored,
@@ -216,3 +216,22 @@ console.log(`version.js: ${commit}${version.dirty ? '+' : ''}, built ${version.b
 // --- stills (step 5): warn, never fail ---------------------------------------
 
 stillsWarnings(checkStills(words, STILLS_DIR)).forEach(line => console.warn(line));
+
+// --- service worker (step 6) -------------------------------------------------
+// Every file the page loads must be in the precache list (scripts/shell.js), or
+// the game breaks offline: stop the build if one isn't. Then write sw.js with
+// this build's version, so every build produces a new worker.
+
+const { SHELL, shellProblems } = require('./shell');
+const shell = shellProblems(ROOT);
+if (shell.notListed.length || shell.missingOnDisk.length) {
+  fail([
+    ...shell.notListed.map(f => `The page loads ${f}, but it isn't in the precache list (scripts/shell.js).`),
+    ...shell.missingOnDisk.map(f => `The precache list (scripts/shell.js) names ${f}, which doesn't exist.`),
+  ]);
+}
+const swTemplate = fs.readFileSync(path.join(__dirname, 'sw.template.js'), 'utf8');
+fs.writeFileSync(path.join(ROOT, 'sw.js'), swTemplate
+  .replace('__VERSION__', JSON.stringify(version))
+  .replace('__SHELL__', JSON.stringify(SHELL, null, 2)));
+console.log(`sw.js: ${SHELL.length} shell files precached, version ${commit}${version.dirty ? '+' : ''} ${version.builtAt}`);

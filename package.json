@@ -6,7 +6,7 @@
   "scripts": {
     "build": "node scripts/build-words.js",
     "icons": "node scripts/build-icons.js",
-    "test": "node tests/build.test.js"
+    "test": "node tests/build.test.js && node tests/sw.test.js"
   },
   "dependencies": {
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"

@@ -51,6 +51,56 @@ test('Real data: the four test stills are found; the other dummy words are the o
   assert.deepStrictEqual(r.unsupported, []);
 });
 
+// --- the service worker's precache list (step 6) ------------------------------
+
+const { SHELL, loadedFiles, shellProblems } = require('../scripts/shell');
+const root = path.join(__dirname, '..');
+
+test('Precache list matches the files the page actually loads (nothing missing, nothing that doesn’t exist)', () => {
+  const problems = shellProblems(root);
+  assert.deepStrictEqual(problems, { notListed: [], missingOnDisk: [] });
+  const loaded = loadedFiles(root);
+  ['version.js', 'words.js', 'storage.js', 'pwa.js', 'game.js', 'style.css', 'manifest.webmanifest',
+    'assets/fonts/josefin-sans-latin.woff2', 'assets/placeholder.svg', 'assets/icons/icon-192.png']
+    .forEach(f => assert.ok(loaded.includes(f), `the page should be found to load ${f}`));
+  assert.ok(!loaded.includes('sw.js'), 'the worker itself is never precached');
+  assert.ok(SHELL.includes('index.html'), 'the page itself is precached');
+});
+
+test('Precache check: a shell file left off the list is reported (the build then fails)', () => {
+  const problems = shellProblems(root, SHELL.filter(f => f !== 'version.js' && f !== 'assets/icons/favicon.ico'));
+  assert.deepStrictEqual(problems.notListed.sort(), ['assets/icons/favicon.ico', 'version.js']);
+});
+
+test('Precache check: a listed file that doesn’t exist is reported', () => {
+  assert.deepStrictEqual(shellProblems(root, [...SHELL, 'assets/nope.png']).missingOnDisk, ['assets/nope.png']);
+});
+
+test('Precache check: the build stops with a clear message when the list is incomplete', () => {
+  // Run the real build against a copy of the project whose list lacks pwa.js.
+  const { execFileSync } = require('child_process');
+  const copy = fs.mkdtempSync(path.join(os.tmpdir(), 'sesq-'));
+  try {
+    for (const f of ['index.html', 'style.css', 'manifest.webmanifest', 'game.js', 'storage.js', 'pwa.js', 'version.js', 'words.js', 'package.json']) {
+      fs.copyFileSync(path.join(root, f), path.join(copy, f));
+    }
+    fs.cpSync(path.join(root, 'assets'), path.join(copy, 'assets'), { recursive: true });
+    fs.cpSync(path.join(root, 'data', 'dummy'), path.join(copy, 'data', 'dummy'), { recursive: true });
+    fs.cpSync(path.join(root, 'scripts'), path.join(copy, 'scripts'), { recursive: true });
+    fs.symlinkSync(path.join(root, 'node_modules'), path.join(copy, 'node_modules'), 'junction');
+    const shellFile = path.join(copy, 'scripts', 'shell.js');
+    fs.writeFileSync(shellFile, fs.readFileSync(shellFile, 'utf8').replace("  'pwa.js',\n", ''));
+    let failedWith = null;
+    try { execFileSync(process.execPath, [path.join(copy, 'scripts', 'build-words.js')], { cwd: copy, stdio: 'pipe' }); }
+    catch (e) { failedWith = e.stderr.toString(); }
+    assert.ok(failedWith, 'the build failed');
+    assert.match(failedWith, /The page loads pwa\.js, but it isn't in the precache list/);
+    assert.ok(!fs.existsSync(path.join(copy, 'sw.js')), 'no sw.js written');
+  } finally {
+    fs.rmSync(copy, { recursive: true, force: true });
+  }
+});
+
 fs.rmSync(dir, { recursive: true, force: true });
 results.forEach(r => console.log(r));
 const failed = results.filter(r => r.startsWith('FAIL')).length;

@@ -172,6 +172,11 @@ const UI = {
   cancel: 'Cancel',
   noMemory: 'This browser isn’t letting the game save anything, so nothing will be remembered after this session.',
 
+  // Installable, offline app (step 6)
+  updateAvailable: 'New version available – tap to update',
+  installApp: 'Add to home screen',
+  iosInstallHint: 'In Safari: Share → Add to Home Screen',
+
   // Version stamp on the front card: 'v f0dfa17 · 28 Sep 2026 14:05'.
   // '+' after the commit means it was built with uncommitted changes.
   version: (commit, dirty, when) => `v ${commit}${dirty ? '+' : ''} · ${when}`,
@@ -684,6 +689,12 @@ const actions = {
     Store.resetHistory();
     state.overlay = 'settings';
   },
+  applyUpdate() {
+    Pwa.applyUpdate();                  // the page reloads once the new version takes over
+  },
+  installApp() {
+    Pwa.promptInstall();
+  },
   back() {
     state.screen = 'front';
   },
@@ -1014,6 +1025,7 @@ const GEAR_ICON = `<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="
 function renderFront() {
   const saved = Store.loadGame();
   return `<section class="screen front">
+    ${updateBar()}
     <button type="button" class="gear" data-action="showSettings" aria-label="${esc(UI.settings)}">${GEAR_ICON}</button>
     <div class="front__body">
       <h1 class="display fit front__title">${esc(UI.title)}</h1>
@@ -1032,14 +1044,29 @@ function renderFront() {
   </section>`;
 }
 
-// '28 Sep 2026 14:05' in the device's time zone; empty if version.js is missing.
-function versionStamp() {
-  const v = window.MOIRA_VERSION;
-  if (!v) return '';
+// 'v f0dfa17 · 28 Sep 2026 14:05' (device's time zone) for a { commit, dirty, builtAt }.
+function formatVersion(v) {
   const d = new Date(v.builtAt);
   const date = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/,/g, '');
   const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-  return `<p class="version">${esc(UI.version(v.commit, v.dirty, `${date} ${time}`))}</p>`;
+  return UI.version(v.commit, v.dirty, `${date} ${time}`);
+}
+
+// The running version, under Start; empty if version.js is missing.
+function versionStamp() {
+  const v = window.MOIRA_VERSION;
+  return v ? `<p class="version">${esc(formatVersion(v))}</p>` : '';
+}
+
+// 'New version available – tap to update', with the new version's stamp.
+// Only on the front card and the scoreboard: never mid-game.
+function updateBar() {
+  if (typeof Pwa === 'undefined' || !Pwa.updateReady) return '';
+  const v = Pwa.updateVersion;
+  return `<button type="button" class="update-bar" data-action="applyUpdate">
+    <span class="update-bar__text">${esc(UI.updateAvailable)}</span>
+    ${v ? `<span class="update-bar__version">${esc(formatVersion(v))}</span>` : ''}
+  </button>`;
 }
 
 // Most players the chosen way to play allows. Define the word is also capped
@@ -1389,6 +1416,7 @@ function renderFinal() {
   }).join('');
 
   return `<section class="screen centre final">
+    ${updateBar()}
     <div class="centre__body">
       <p class="label">${esc(UI.finalHeading)}</p>
       <h1 class="display fit final__title">${esc(title)}</h1>
@@ -1448,6 +1476,12 @@ function renderConfirm(id, message, yesAction, yesLabel, noAction, noLabel) {
   </div>`;
 }
 
+// iPhone/iPad, not yet on the home screen: how to add it (there's no prompt).
+function installHint() {
+  if (typeof Pwa === 'undefined' || !Pwa.isIOS() || Pwa.standalone()) return '';
+  return `<p class="settings__line install-hint">${esc(UI.iosInstallHint)}</p>`;
+}
+
 function renderSettings() {
   const names = Store.names().filter(n => n);
   return `<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="settings-title">
@@ -1460,8 +1494,10 @@ function renderSettings() {
         <p class="settings__line">${esc(UI.poolPlayed(UI.mainPool, mainPlayed(), MAIN.length))}</p>
         <p class="settings__line">${esc(UI.poolPlayed(UI.bonusPool, bonusPlayed(), BONUS_POOL.length))}</p>
         ${Store.available() ? '' : `<p class="hint-text">${esc(UI.noMemory)}</p>`}
+        ${installHint()}
       </div>
       <div class="overlay__actions">
+        ${typeof Pwa !== 'undefined' && Pwa.canInstall ? button('installApp', UI.installApp, 'btn--secondary') : ''}
         ${button('askReset', UI.resetHistory, 'btn--secondary')}
         ${button('closeOverlay', UI.close, 'btn--primary')}
       </div>
@@ -1510,6 +1546,7 @@ function render() {
   markAsked();
   prefetchStills();
   holdOrientation(state.screen === 'photo');
+  if (typeof Pwa !== 'undefined' && (state.screen === 'front' || state.screen === 'final')) Pwa.checkForUpdate();
 
   // Start each new screen or question at the top.
   const key = `${state.screen}:${state.turn}:${state.qIndex}:${state.q && state.q.word.id}`;
@@ -1561,6 +1598,12 @@ app.addEventListener('keydown', e => {
   if (next) next.focus();
   else { actions.start(); render(); persist(); }
 });
+
+// A new version waiting, or the install prompt arriving, only changes what the
+// front card, scoreboard and Settings show – so only re-render there.
+if (typeof Pwa !== 'undefined') {
+  Pwa.onChange = () => { if (state.screen === 'front' || state.screen === 'final') render(); };
+}
 
 // Escape closes an overlay.
 document.addEventListener('keydown', e => {

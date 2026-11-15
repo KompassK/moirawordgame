@@ -229,6 +229,36 @@ body[data-theme="dark"] .link { color: var(--night-soft); }
 .settings__line { font-size: 18px; color: var(--ink-soft); }
 .overlay__scroll .settings__title + .label { margin-top: 4px; }
 
+/* 'New version available – tap to update' (step 6): a slim black strip across
+   the top of the front card or scoreboard, edge to edge, with the new
+   version's stamp under it. */
+.update-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: calc(100% + 2 * var(--gutter));
+  min-height: 52px;
+  margin: calc(-1 * (env(safe-area-inset-top) + 20px)) calc(-1 * var(--gutter)) 16px;
+  padding: calc(env(safe-area-inset-top) + 6px) 16px 6px;
+  border: 0;
+  background: var(--ink);
+  color: #fff;
+  font: 600 15px/1.3 var(--sans);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.update-bar__version { font-size: 12px; font-weight: 400; color: #cfcfcf; }
+.update-bar:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+/* Front card: the bar sits above the gear, and the content clears both. */
+.front .update-bar { margin-top: calc(-1 * (env(safe-area-inset-top) + 56px)); margin-bottom: 60px; }
+.front .update-bar ~ .gear { top: calc(env(safe-area-inset-top) + 60px); }
+
+.install-hint { font-weight: 600; color: var(--ink); }
+
 /* Version stamp under Start: small, grey, out of the way. */
 .version {
   margin: -2px 0 0;

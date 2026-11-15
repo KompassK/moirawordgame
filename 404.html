@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sesquipedalian</title>
+  <meta name="robots" content="noindex">
+</head>
+<body style="font: 18px/1.5 system-ui, sans-serif; padding: 24px;">
+  <p>Taking you to Sesquipedalian… <a id="home" href="./">Open the game</a></p>
+  <script>
+    // GitHub Pages serves this for any missing path. Send a stale deep link to
+    // the game. On a project site the first path segment is the repo
+    // (/moirawordgame/…); anywhere else (a custom domain, a local server) the
+    // game is at the root.
+    (function () {
+      var first = location.pathname.split('/')[1];
+      var base = /\.github\.io$/.test(location.hostname) && first ? '/' + first + '/' : '/';
+      document.getElementById('home').href = base;
+      location.replace(base);
+    })();
+  </script>
+</body>
+</html>
