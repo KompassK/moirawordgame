@@ -37,7 +37,7 @@ The repo (`KompassK/moirawordgame`) and folder (`moira-words`) keep their old na
 | `assets/icons/` | Rendered, committed: `icon-192.png`, `icon-512.png` (purpose `any`), `icon-512-maskable.png` (purpose `maskable`), `apple-touch-icon.png` (180), `favicon-32.png`, `favicon.ico` (16/32/48). |
 | `assets/share.png` | Rendered, committed share image (1200×630). |
 | `storage.js` | Everything the device remembers between games (step 3), behind one small `Store` module. Loaded after `words.js`, before `game.js`. |
-| `tests/index.html`, `tests/step3.test.js` | Step 3 tests. Open `tests/index.html` in any browser (double-click works); it uses an in-memory store, never the real one. The page title ends PASS or FAIL. |
+| `tests/index.html`, `tests/step3.test.js`, `tests/step4.test.js`, `tests/report.js` | The tests (36 at step 4). Open `tests/index.html` in any browser (double-click works); it uses an in-memory store, never the real one. The page title ends PASS or FAIL. Test helpers must not reuse a name from `game.js` (classic scripts share one global scope). |
 | `scripts/build-icons.js` | `npm run icons`: renders `assets/icons/*` and `assets/share.png` from the two SVGs with resvg. **Only re-run if `icon.svg` or `share.svg` changes**, then commit the PNGs. |
 
 ## Look and feel
@@ -99,11 +99,11 @@ All other columns are ignored. `Bonus point available? (Y/N)` is retired; do not
 - The title 'Sesquipedalian', large; the line 'A Moira Rose vocabulary game'; then this intro, **word for word** (in `UI.intro`):
   > We all love Moira Rose but it's fair to say she was a sesquipedalian. Still we can all learn from her wonderful use of words. The aim of this game is to test our knowledge and understanding of her vocabulary. Highest score wins.
 - Then 'There are three ways to play:' and the **three way-to-play boxes**, where the way to play is chosen:
-  - **Define the word** – 'Say what the word means. Hints cost points. 2–4 players.'
-  - **Fill in the blank** – 'Supply the missing word from the quote. 2–4 players.'
-  - **Name the episode** – 'Which season and episode is the quote from? 2–4 players.'
-  - A locked box is dashed, greyed, can't be chosen, and shows **only** 'Play a Define the word game first to unlock this mode' and, under it, the progress ('4 of 10 words played') – no tag line, no player range. Its tag line and player range appear once it unlocks (see Unlock rule; `isUnlocked()` in `game.js`). A word joiner keeps '2–4' together on one line.
-  - Until step 4, tapping an unlocked Fill in the blank or Name the episode box opens a small card – the game's name, 'Coming in step 4', Close – and the chosen way to play stays Define the word.
+  - **Define the word** – 'Say what the word means. Hints cost points. Up to 4 points a word, 5 for the bonus word. 2–4 players.'
+  - **Fill in the blank** – 'Supply the missing word from the quote. 1 point a word. 2–4 players.' and, under it, the playable set ('32 words to play').
+  - **Name the episode** – 'Which season and episode is the quote from? 1 point for the season, 3 for both. 2–4 players.' and the playable set.
+  - Each box: a one-line description, its scoring, the player range. A locked box is dashed, greyed, can't be chosen, and shows **only** 'Play a Define the word game first to unlock this mode' and, under it, the progress ('4 of 10 words played'). Description, scoring, player range and playable set appear once it unlocks (see Unlock rule; `isUnlocked()` in `game.js`). A word joiner keeps '2–4' together on one line.
+  - **This is where the way to play is chosen** (the brief's 'setup screen with the option cards'). New game, End game and a finished game all come back here.
 - A big **Start** button goes to How to play. If there's a saved game (see Saving and resuming), **Resume game** (black) sits above Start (then outlined), and Start first asks 'Abandon the saved game?' – **Abandon it** / **Keep it**.
 - A small grey **gear** at the top right opens the Settings card (see The device's memory). The front card's content starts below the gear.
 
@@ -118,25 +118,27 @@ A small **Rules** link on the How to play screen and on the pass-the-device scre
 4. Stuck? You can give up on any word at any time. It counts as a pass: no points for that word, and you move on to the next one. You still get 10 words in all. *(Added in step 2 at Katharine's request.)*
 5. The asker judges. Adults decide what's close enough.
 
-**Fill in the blank** and **Name the episode** – drafted in the same voice from the rules below and agreed: each says 'Everyone takes a turn of 10 questions' and includes the Give up / pass line.
+**Fill in the blank** and **Name the episode** – drafted in the same voice from the rules below. Each says 'Everyone takes a turn of **9** questions' (step 4's brief; Katharine's earlier answer was 10 – see Open questions) and includes the Give up / pass line. Fill in the blank adds 'saying 'blank' for the missing word' and 'Any form of the word counts if the table agrees'; Name the episode adds 'its number or its title' and 'the episode isn't asked' after a wrong season.
 
 ### How to play (the second screen: set-up)
 - A top bar with **‹ Back** (to the front card, to change the way to play) and **Rules**.
 - The chosen way to play's name as the **title** (e.g. 'Define the word', shrunk to fit one line if needed), **How to play** as the subtitle under it, then its how-to-play text.
 - **Number of players: 2, 3 or 4, for every way to play.** Every game needs a tester and an answerer, so there is no solo mode; five and six don't exist. (`MIN_PLAYERS` / `MAX_PLAYERS` in `game.js`.) For Define the word the pool-size check stays (the dummy list supports 4) but won't bite.
 - Names in seating order (clockwise), **pre-filled with the names from the last game** on this device (and the player count set to match). A blank name becomes 'Player N', so a game can start in three taps (Start, Start the game, ready). **Start the game**.
+- Options 2 and 3 only: a line under the player count – '9 words per turn, from the 32 you've played.' – showing the reduced number when the playable set is small (see Options 2 and 3). If there aren't enough for even one word each, it says so ('Only 3 played words to use – not enough for this many players. Play more Define the word first.') and **Start the game** is disabled.
 - Phone: all of this in one column with Start the game pinned; tablet: how-to-play text left, players and names right.
-- Words per turn is fixed, not configurable.
+- Words per turn is fixed, not configurable (only reduced automatically in Options 2 and 3).
 
 ### Turns
 - Player 1 is the first **answerer**. The **tester** is always the next player in seating order (to the answerer's left) and holds the device and reads aloud. After each turn the answerer moves one seat on.
 - A round is one pass in which every player has one turn. **A game is one round.**
-- Option 1 turn: 9 main-pool words, then 1 bonus-pool word (always the tenth and last).
+- Option 1 turn: 9 main-pool words, then 1 bonus-pool word (always the tenth and last). Options 2 and 3: 9 words, no bonus word (fewer if the playable set is small).
+- **Every turn screen** (Option 1 main and bonus words, Options 2 and 3) has a small grey **End game** in the top-right corner, beside 'Testing: …', with the same confirm as elsewhere. The photo screen has none: the whole photo is a 'tap anywhere to go back' area and is facing the answerer; End game is on the turn screen it returns to.
 - Before the first turn a handover screen says 'Pass the device to [tester]' with an 'I'm [tester], ready' button, so nothing is shown until the tester has the device.
 - After each turn except the last: pass-the-device screen – 'Pass the device to [next tester]', the answerer's score for the turn, a mini scoreboard, 'I'm [next tester], ready', and two small links: **Rules** and **End game**. After the last word of the last turn the reveal card's button reads 'See the final scores'.
 
 ### Draw
-- Per turn: 9 main words at random, then 1 bonus word at random. No word is drawn twice in a game (tiebreak words included).
+- Per turn (Option 1): 9 main words, then 1 bonus word, least-asked first (see The device's memory). Options 2 and 3: their words per turn from the playable set, least-asked first by that option's own counts. No word is drawn twice in a game (tiebreak words included).
 - Shared quotes: once a main word is drawn, other words with the same `quoteGroup` are excluded from the rest of that turn. Only if the pool is too small to avoid it is a sibling allowed (logged as a console warning).
 
 ### Option 1 – main-pool words (hint ladder)
@@ -179,22 +181,38 @@ The tester's screen, top to bottom: 'Testing: [answerer] · Question n of 10'; t
 ### Final scoreboard
 - Ranked names and totals (equal scores share a rank).
 - One leader: '[Name] wins!'. Level at the top: 'Tied', the tied names, a one-line explanation, and a **Tiebreak** button.
-- **Play again** starts a new game straight away with the same players; **New game** returns to setup with the names kept; a small **End game** link (with confirmation) returns to the front card.
+- **Play again** starts a new game straight away with the **same way to play and the same players**. **New game** goes to the **front card**, where the way to play is chosen (the last one stays selected; names are pre-filled on How to play). A small **End game** link (with confirmation) also returns to the front card.
 
 ### Tiebreak
 - Offered when the top score is shared. The tied players, in seating order, each answer one Catherine O'Hara bonus word per round, scored exactly as a normal bonus word and added to their totals. The tester is the next player round the table, as usual, with a pass-the-device screen before each word ('Tiebreak – round n', the tied players' scores).
-- Words: any bonus word not yet drawn in *this* game, **least-asked first** (same rule as the main draw), so never-asked words come first and then bonus words from earlier games are reused. Tiebreak words count as asked.
+- Words: any bonus word not yet drawn in *this* game, **least-asked first** (same rule as the main draw), so never-asked words come first and then bonus words from earlier games are reused. Tiebreak words count as asked – in Option 1's (bonus) history, in every way to play, because they are Option 1-style questions.
+- The same in all three ways to play: an Option 2 or 3 tiebreak uses bonus words scored as in Option 1.
 - After each full round, if one player is ahead, they win ('[Name] wins!', 'Won on the tiebreak'). If not, anyone behind the leaders drops out ('Still level: A and B. Another round.') and the leaders play another round. (Drop-out confirmed by Katharine.)
 - If there aren't enough unused bonus words for every remaining player to have one in the next round, it's a **Draw** ('The bonus words have run out, so it's a draw between A and B.').
 
 ### End game
-A small **End game** link on the pass-the-device screen and the final scoreboard. It asks 'End this game? Scores will be lost.' – **End game** (black) or **Keep playing** (or Escape) – and returns to the front card.
+A small **End game** on **every turn screen** (top-right corner), the pass-the-device screen and the final scoreboard. It asks 'End this game? Scores will be lost.' – **End game** (black) or **Keep playing** (or Escape) – then clears the saved game and returns to the front card. Mid-question, the question isn't scored (and it already counted as asked, since it reached the screen).
 
-### Option 2 – Fill in the blank (step 4)
-Same turn structure as Option 1: each player has one turn of **10 questions**, the tester is the player to their left, everyone has a turn, then the round (and game) ends. 2–4 players. Tester sees the quote with the word blanked and reads it aloud; answerer supplies the word. 1 point, one guess, no hints. Give up = pass (0, next question).
+## Options 2 and 3 (step 4)
 
-### Option 3 – Name the episode (step 4)
-Same turn structure: one turn of **10 questions** per player, everyone has a turn, then the round ends. 2–4 players. Tester reads the quote (and shows the photo if there is one); answerer names the season, then the episode. Season right → 1; season and episode right → 3; season wrong → 0. Give up = pass (0, next question).
+### Common to both
+- Open only once unlocked (see Unlock rule). Lighter variants of the Option 1 turn: same top line with End game, points badge, tester-only panel, pinned buttons, Give up and Oops, go back underneath; same pass-the-device, scoreboard, End game, Resume and tiebreak (tiebreak still uses bonus words, scored as in Option 1).
+- **The playable set** (`playable()` in `game.js`): main-pool words with an **Option 1 history on this device** (asked at least once in Define the word) **and a quote**. Name the episode also needs the season and episode number (otherwise there's nothing to judge). Never bonus words, never words not yet asked in Option 1. Shown on the front card box ('32 words to play').
+- **Words per turn: 9**, no bonus word. If the playable set is too small for every player to have 9, the turn shrinks so everyone gets the same: ⌊playable ÷ players⌋ (`optionPerTurn()`), and the How to play screen says so ('8 words per turn, from the 32 you've played.'). 0 means Start is disabled.
+- Same turn structure as Option 1: 2–4 players in seating order, the tester to the answerer's left, one turn each, device passes left, one round.
+- Same **least-asked-first** draw and shared-quote exclusion, but each way to play has **its own ask-counts** (`counts.blank`, `counts.episode`), so playing Option 2 never skews Option 1's draws or its history.
+- **Give up** = pass, 0 points (see Open questions for Option 3 after a right season).
+
+### Option 2 – Fill in the blank
+- Turn screen: points badge (1); the quote, large, with the target word replaced by a **blank** – a rule as long as the word; 'Read it aloud, saying 'blank' for the gap.'; tester-only panel: **The answer** (the word) and its definition.
+- Buttons: **Correct** (1 point) / **Wrong** (0). One guess. Any inflection the table agrees on counts; the app doesn't judge.
+- **Blanking** (`blankQuote()`): a word in the quote matches if it starts with the **first five letters** of the spreadsheet's word (its first word, letters only, case-insensitive) – so 'Squire (verb)' finds 'squired' and 'squiring', 'Haughty' finds 'haughtily'. Every match is blanked; an apostrophe-s stays visible. The quote text is never changed – it's only split for display. **No match:** nothing is blanked and the tester panel shows a dashed warning ('Couldn't find 'Word' in this quote, so nothing is blanked. Please check the spreadsheet.') so the data can be fixed.
+- Reveal card: 'Yes, you're right!' or 'Sorry, that's not right – the word was [Word].'; the **full quote with the word highlighted** (grey highlight, bold); then 'In this scene, …' as in Option 1; points and running total.
+
+### Option 3 – Name the episode
+- Turn screen: points badge (3); 'Season first, then the episode – its number or its title.'; the quote, large; tester-only panel: **The answer** ('Season 2, episode 3') and the episode title; then the **still, inline** (when the word has an `imageFile`) – below the answer so the answer is never pushed under the buttons; the tester scrolls to it and turns the device round.
+- Buttons: **Season correct** / **Season wrong**; after a correct season ('Season right: 1 point. Now the episode – 2 more if right.'), **Episode correct** / **Episode wrong**. Scoring: season wrong **0** (the episode isn't asked); season right, episode wrong **1**; both **3**. The tester judges the episode on number or title; if the table agrees, it's correct. Oops, go back undoes the season tap.
+- Reveal card: 'Yes, you're right!' / 'Right season, wrong episode.' / 'Sorry, that's not right.'; then 'Season 1, episode 4: 'Test Episode Four'.'; then 'In this scene, …'; points and running total.
 
 ## The device's memory (step 3)
 
@@ -202,28 +220,34 @@ Same turn structure: one turn of **10 questions** per player, everyone has a tur
 One `localStorage` key, `sesquipedalian`, holding:
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "names": ["Kath", "", "Alexis"],
   "datasets": {
-    "f7f1920f-50": { "words": { "9001": { "n": 2, "last": "2026-11-15" } } }
+    "f7f1920f-50": {
+      "counts": {
+        "define":  { "9001": { "n": 2, "last": "2026-11-15" } },
+        "blank":   { "9001": { "n": 1, "last": "2026-11-15" } },
+        "episode": {}
+      }
+    }
   },
   "savedGame": { "datasetId": "f7f1920f-50", "savedAt": 1794770000000, "game": { … } }
 }
 ```
-- **`datasets[datasetId].words`** – per word ID, `n` = times asked in an Option 1 turn on this device, `last` = local date last asked. Keyed by the dataset identifier from `words.js`, so a different spreadsheet (the live one at step 7) automatically starts with no usage and no saved game.
+- **`datasets[datasetId].counts[option]`** – per way to play (`define`, `blank`, `episode`), per word ID: `n` = times asked on this device, `last` = local date last asked. `counts.define` is the **Option 1 history**. Keyed by the dataset identifier from `words.js`, so a different spreadsheet (the live one at step 7) automatically starts with no usage and no saved game.
 - **`names`** – the last game's names in seating order, as typed (blanks stay blank, so 'Player N' isn't remembered), up to 4. Not per dataset: they survive the switch to live data.
 - **`savedGame`** – the game in progress (see below), with the dataset it belongs to and when it was saved.
-- `schemaVersion` is 1. `migrate()` in `storage.js` is where later versions convert old records; anything unrecognised (or corrupt JSON) starts fresh.
+- **`schemaVersion` is 2** (step 4). `migrate()` in `storage.js` converts old records one version at a time: **v1 → v2** moves step 3's `datasets[id].words` (Option 1 counts) to `counts.define` and adds empty `blank` and `episode`. Anything unrecognised – a newer version, or corrupt JSON – starts fresh.
 - Every read and write is wrapped in try/catch. If storage is unavailable or full, the game plays normally and remembers changes for the session only; the Settings card then says nothing will be remembered.
 
 ### Asked, and the two pools
-- A word counts as **asked** the first time it reaches the turn screen (`markAsked()`, called from `render()`) – not when drawn. Words drawn but never shown (e.g. after End game) don't count. Re-showing a question after a resume or an undo doesn't count again. Tiebreak bonus words count.
+- A word counts as **asked** the first time it reaches the turn screen (`markAsked()`, called from `render()`) – not when drawn – and is recorded under the way to play being played (`optionOf()`; bonus words, including tiebreak words, always under `define`). Words drawn but never shown (e.g. after End game) don't count. Re-showing a question after a resume or an undo doesn't count again.
 - The main and bonus pools cycle independently.
-- **Least-asked first** (`leastAskedFirst()` in `game.js`): every draw takes words with the lowest ask-count first – never asked, then asked once, then twice – at random within each band. This **replaces the explicit 'reset' step**: when a pool's unused words run short, the draw simply dips into the least-asked ones. No flags to reset.
+- **Least-asked first** (`leastAskedFirst()` in `game.js`, by that way to play's own counts): every draw takes words with the lowest ask-count first – never asked, then asked once, then twice – at random within each band. This **replaces the explicit 'reset' step**: when a pool's unused words run short, the draw simply dips into the least-asked ones. No flags to reset.
 - Within a game no word is drawn twice, and the shared-quote exclusion within a turn still applies.
 
 ### Unlock rule
-The Option 1 history is derived from the ask-counts (a word is in it if `n > 0`); it isn't stored separately. Options 2 and 3 unlock when **10 or more main-pool words** have been asked on this device (`UNLOCK_WORDS`). Bonus words don't count. While locked, the boxes show 'n of 10 words played'. Options 2 and 3 will draw only from words in the history (step 4).
+The Option 1 history is derived from the ask-counts (a word is in it if `n > 0`); it isn't stored separately. Options 2 and 3 unlock when **10 or more main-pool words** have been asked on this device (`UNLOCK_WORDS`). Bonus words don't count. While locked, the boxes show 'n of 10 words played'. Options 2 and 3 draw only from words in the history (see Options 2 and 3). Playing Options 2 and 3 never adds to it.
 
 ### Saving and resuming
 - The whole game in progress is saved after **every tap** (`persist()` after each click), with words saved by ID. Undo history isn't saved.
@@ -246,8 +270,8 @@ The Option 1 history is derived from the ask-counts (a word is in it if `n > 0`)
 1. **Option 1 playable slice on dummy data**: setup, turns, hint ladder, bonus word, reveal card, pass-the-device, scoreboard, placeholder still. ← done
 2. **Rename to Sesquipedalian, restyle, answers to open questions**: front card with the way-to-play boxes, How to play screen with players and names, rules overlay, 2–4 players for every way to play (no solo mode), black/white/grey palette, self-hosted Josefin Sans, Give up, undo on the turn screen, re-show photo, definition on a correct reveal, tiebreak, End game. Follow-up refinements: game name as the How to play screen's title, intro trimmed and 'Highest score wins.' added, Give up as a pass in all three rules texts, 10-question turns for Options 2 and 3. ← done
 2b. **Home-screen icon, share preview and version stamp** (no game-logic changes): `assets/icon.svg` and `share.svg`, `npm run icons` → rendered PNGs and `favicon.ico`, `manifest.webmanifest`, icon / favicon / theme-colour / Open Graph / Twitter tags in `index.html`, version stamp on the front card. ← done
-3. **The device remembers things between games**: `storage.js` (versioned schema, keyed by dataset), per-word ask-counts with least-asked-first draws in two independent pools, the Option 2/3 unlock at 10 main words with a progress count and a 'Coming in step 4' card, game saved after every tap with Resume game (under 24 hours) and the abandon check, Settings card (remembered names, words played, Reset word history), tests in `tests/`. ← **done** (next is step 4)
-4. Options 2 and 3.
+3. **The device remembers things between games**: `storage.js` (versioned schema, keyed by dataset), per-word ask-counts with least-asked-first draws in two independent pools, the Option 2/3 unlock at 10 main words with a progress count and a 'Coming in step 4' card, game saved after every tap with Resume game (under 24 hours) and the abandon check, Settings card (remembered names, words played, Reset word history), tests in `tests/`. ← done
+4. **Options 2 and 3**: Fill in the blank (blanking by the first five letters, with a data warning when nothing matches) and Name the episode (season, then episode: 1 / 3 / 0), from the playable set (Option 1 history with a quote), 9 words a turn or fewer when the set is small, their own ask-counts (storage schema v2 with a v1 → v2 migration). Also: New game goes to the front card, Play again keeps the way to play, End game on every turn screen. ← **done** (next is step 5)
 5. Real images and the quote-overlay rule.
 6. Service worker (offline), GitHub Pages deploy check. (The manifest already exists from step 2b.)
 7. Swap the dummy spreadsheet for the live one.
@@ -273,8 +297,12 @@ On the phone, if the stamp's time is older than the last push, it's still showin
 1. **Resume resets the question to its start – including hints already used.** As specified, a refresh mid-question brings the question back at its start, worth 4 again. But if the quote had already been read, or a wrong guess had capped it at 1, the answerer has now heard the quote and could still score 4. Should a resume instead keep the hints used and any cap (but still score nothing until the question is answered)?
 2. **Remembered names aren't tied to the word list.** They survive the switch to the live data and aren't cleared by Reset word history (as asked). Is a way to forget them wanted, e.g. a 'Forget names' button in Settings?
 3. **Start vs Play.** Step 3's brief calls the front card's button 'Play'; it still says **Start** (step 2 wording). Rename it to Play?
+4. **9 or 10 questions in Options 2 and 3?** Step 2's answer was '1 turn should be 10 questions'; step 4's brief says 9 words per turn (no bonus word). Built as **9**, and both rules texts now say 9. Confirm, or should it be 10 main words?
+5. **Give up after a right season (Option 3).** Give up is 'a pass: no points for that word', so tapping it after Season correct takes the season point back (0). Episode wrong keeps it (1). Should Give up at the episode stage keep the season point instead?
+6. **Settings for Options 2 and 3.** The Settings card's 'Words played' lines are still Option 1 only, but Reset word history clears all three ways to play's counts. Show Option 2 and 3 lines too?
+7. **Leftover words when the turn shrinks.** With a small playable set, every player gets ⌊playable ÷ players⌋ words, so a few playable words may go unused in that game (e.g. 10 words, 4 players: 2 each, 2 unused). Fine?
 
-*Resolved in step 2: tiebreak drop-out (yes); tiebreak reuses earlier games' bonus words from step 3 (yes); Options 2 and 3 are turns of 10 questions; Give up is in all three ways to play and in all three rules texts, goes straight to the reveal card and can be undone.*
+*Resolved in step 2: tiebreak drop-out (yes); tiebreak reuses earlier games' bonus words from step 3 (yes); Options 2 and 3 are turns of 10 questions (changed to 9 by step 4's brief – see question 4); Give up is in all three ways to play and in all three rules texts, goes straight to the reveal card and can be undone.*
 
 ## Conventions
 

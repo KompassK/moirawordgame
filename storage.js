@@ -5,23 +5,31 @@
 //
 // Schema (one localStorage key, 'sesquipedalian'):
 // {
-//   schemaVersion: 1,
+//   schemaVersion: 2,
 //   names: ['Kath', 'David', …],            // last game's names, up to 4 (not per dataset)
 //   datasets: {
 //     '<datasetId>': {
-//       words: { '<wordId>': { n: 2, last: '2026-11-15' } }   // Option 1 ask-count and last date
+//       counts: {                            // ask-count and last date, per way to play
+//         define:  { '<wordId>': { n: 2, last: '2026-11-15' } },
+//         blank:   { … },
+//         episode: { … }
+//       }
 //     }
 //   },
 //   savedGame: { datasetId, savedAt, game } | null   // the in-progress game (see game.js)
 // }
 // The dataset identifier comes from words.js (build-words.js), so a different
 // word list starts with empty usage and no saved game.
+//
+// History: v1 (step 3) kept Option 1's counts in datasets[id].words.
+// v2 (step 4) moved them to counts.define and added blank and episode.
 
 'use strict';
 
 const Store = (() => {
   const KEY = 'sesquipedalian';
-  const SCHEMA_VERSION = 1;
+  const SCHEMA_VERSION = 2;
+  const OPTIONS = ['define', 'blank', 'episode'];
   const SAVED_GAME_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
   let backend = null;       // localStorage, or a test double
@@ -33,9 +41,19 @@ const Store = (() => {
     return { schemaVersion: SCHEMA_VERSION, names: [], datasets: {}, savedGame: null };
   }
 
-  // Later schema versions add steps here. Anything unrecognised starts fresh.
+  // Bring an older record up to date, one version at a time. Anything
+  // unrecognised (or from a newer version) starts fresh.
   function migrate(raw) {
-    if (!raw || typeof raw !== 'object' || raw.schemaVersion !== SCHEMA_VERSION) return empty();
+    if (!raw || typeof raw !== 'object') return empty();
+    if (raw.schemaVersion === 1) {
+      // v1 → v2: Option 1's counts move from `words` to `counts.define`.
+      const datasets = {};
+      for (const [id, ds] of Object.entries(raw.datasets && typeof raw.datasets === 'object' ? raw.datasets : {})) {
+        datasets[id] = { counts: { define: ds && typeof ds.words === 'object' ? ds.words : {}, blank: {}, episode: {} } };
+      }
+      raw = { ...raw, schemaVersion: 2, datasets };
+    }
+    if (raw.schemaVersion !== SCHEMA_VERSION) return empty();
     return {
       schemaVersion: SCHEMA_VERSION,
       names: Array.isArray(raw.names) ? raw.names.filter(n => typeof n === 'string').slice(0, 4) : [],
@@ -62,11 +80,17 @@ const Store = (() => {
     }
   }
 
-  function dataset() {
-    if (!data.datasets[datasetId] || typeof data.datasets[datasetId].words !== 'object') {
-      data.datasets[datasetId] = { words: {} };
-    }
-    return data.datasets[datasetId];
+  function freshDataset() {
+    return { counts: Object.fromEntries(OPTIONS.map(o => [o, {}])) };
+  }
+
+  // The counts for one way to play, in the current dataset.
+  function counts(option) {
+    if (!OPTIONS.includes(option)) throw new Error('unknown way to play: ' + option);
+    let ds = data.datasets[datasetId];
+    if (!ds || typeof ds.counts !== 'object' || !ds.counts) ds = data.datasets[datasetId] = freshDataset();
+    if (typeof ds.counts[option] !== 'object' || !ds.counts[option]) ds.counts[option] = {};
+    return ds.counts[option];
   }
 
   function today() {
@@ -88,23 +112,26 @@ const Store = (() => {
     // True if the device's memory is working (for diagnostics).
     available: () => ok && Boolean(backend),
 
-    // --- per-word usage (Option 1), for the current dataset ---
-    askCount(wordId) {
-      const w = dataset().words[wordId];
+    // --- per-word usage, per way to play ('define', 'blank', 'episode'), for the
+    // current dataset. Each way to play has its own counts, so playing one never
+    // skews another's draws. 'define' is the Option 1 history.
+    askCount(wordId, option = 'define') {
+      const w = counts(option)[wordId];
       return w && Number.isFinite(w.n) ? w.n : 0;
     },
-    recordAsked(wordId) {
-      const words = dataset().words;
-      const w = words[wordId] || { n: 0, last: null };
-      words[wordId] = { n: (Number.isFinite(w.n) ? w.n : 0) + 1, last: today() };
+    recordAsked(wordId, option = 'define') {
+      const c = counts(option);
+      const w = c[wordId] || { n: 0, last: null };
+      c[wordId] = { n: (Number.isFinite(w.n) ? w.n : 0) + 1, last: today() };
       write();
     },
-    // How many of these word IDs have ever been asked.
-    playedCount(wordIds) {
-      return wordIds.filter(id => this.askCount(id) > 0).length;
+    // How many of these word IDs have ever been asked in this way to play.
+    playedCount(wordIds, option = 'define') {
+      return wordIds.filter(id => this.askCount(id, option) > 0).length;
     },
+    // Forget usage for every way to play, in the current dataset only.
     resetHistory() {
-      data.datasets[datasetId] = { words: {} };
+      data.datasets[datasetId] = freshDataset();
       write();
     },
 

@@ -333,11 +333,27 @@ body[data-theme="dark"] .link { color: var(--night-soft); }
 
 /* --- turn screen -------------------------------------------------------- */
 
+/* Top line of every turn screen: who's being tested, and End game in the corner. */
+.turn__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
 .turn__meta {
   font-size: 15px;
   color: var(--muted);
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--line);
+}
+
+/* Deliberately unobtrusive: small grey text, but still a 44px tap target. */
+.link--corner {
+  flex: none;
+  margin-right: -4px;
+  font-size: 14px;
+  color: var(--muted);
 }
 
 .turn__grid { display: grid; gap: 22px; padding-top: 22px; }
@@ -440,7 +456,62 @@ body[data-theme="dark"] .note { color: #fff; }
   font-weight: 700;
 }
 
-.turn--bonus .turn__meta { color: var(--night-muted); border-color: var(--night-line); }
+.turn--bonus .turn__top { border-color: var(--night-line); }
+.turn--bonus .turn__meta, .turn--bonus .link--corner { color: var(--night-muted); }
+
+/* --- Options 2 and 3 --------------------------------------------------- */
+
+/* The quote is what the tester reads aloud, so it's the big thing here. */
+.quote--read {
+  justify-self: stretch;
+  font-size: 24px;
+  line-height: 1.45;
+}
+
+/* The blank: a rule as long as the missing word. */
+.blank {
+  display: inline-block;
+  width: calc(max(var(--len), 4) * 0.55em);
+  height: 0.9em;
+  border-bottom: 3px solid currentColor;
+  vertical-align: baseline;
+}
+
+/* Reveal card: the word picked out in the full quote. */
+mark.hit {
+  padding: 0 0.12em;
+  border-radius: 3px;
+  background: var(--pill);
+  color: inherit;
+  font-weight: 700;
+}
+
+.reveal__quote { font-size: 22px; }
+
+.panel__answer { font-size: 22px; font-weight: 700; margin: 2px 0 6px; }
+
+/* Data problem for Katharine to fix: shown to the tester only. */
+.panel__warning {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 2px dashed var(--ink);
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Option 3: the still, inline under the tester's answer (so the answer is
+   never pushed under the buttons); the tester scrolls to it and turns the
+   device round to show it. */
+.inline-still {
+  justify-self: stretch;
+  width: 100%;
+  max-height: 32vh;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
 
 /* Invented sentence: boxed, dashed, captioned – deliberately unlike a show quote. */
 .invented {
@@ -622,6 +693,8 @@ body[data-theme="dark"] .note { color: #fff; }
 
   .actions--turn { grid-template-columns: 1fr 1fr 1fr; }
   .actions--turn .btn--span { grid-column: span 2; }
+  .actions--two { grid-template-columns: 1fr 1fr; }
+  .quote--read { font-size: 30px; }
   .actions--turn .minor { grid-column: 1 / -1; }
   .actions--turn .btn--correct, .actions--turn .btn--wrong { min-height: 76px; font-size: 23px; }
 

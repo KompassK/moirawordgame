@@ -23,6 +23,7 @@ const UI = {
     define: {
       name: 'Define the word',
       blurb: 'Say what the word means. Hints cost points.',
+      scoring: 'Up to 4 points a word, 5 for the bonus word.',
       players: '2–⁠4 players.', // ⁠ (word joiner) keeps '2–4' on one line
       rules: [
         'Everyone takes a turn to be asked to define 10 words. The player on your left holds the phone and reads out the words for you to define: nine from the show’s dialogue and one Catherine O’Hara loquacity masterclass as a bonus. Once everyone has had a turn, that’s the end of the round. Highest scorer wins.',
@@ -35,10 +36,11 @@ const UI = {
     blank: {
       name: 'Fill in the blank',
       blurb: 'Supply the missing word from the quote.',
+      scoring: '1 point a word.',
       players: '2–⁠4 players.',
       rules: [
-        'Everyone takes a turn of 10 questions. The player on your left holds the phone and reads out a line from the show with one word missing. Say the missing word.',
-        'One guess, no hints: 1 point for each right answer. Stuck? Give up to pass: no points, and you move on to the next question. Once everyone has had a turn, that’s the end of the round. Highest scorer wins.',
+        'Everyone takes a turn of 9 questions. The player on your left holds the phone and reads out a line from the show, saying ‘blank’ for the missing word. Say the missing word.',
+        'One guess, no hints: 1 point for each right answer. Any form of the word counts if the table agrees. Stuck? Give up to pass: no points, and you move on to the next question. Once everyone has had a turn, that’s the end of the round. Highest scorer wins.',
         'The lines come from words you’ve already met in Define the word, so play that first.',
         'The asker judges. Adults decide what’s close enough.',
       ],
@@ -46,10 +48,11 @@ const UI = {
     episode: {
       name: 'Name the episode',
       blurb: 'Which season and episode is the quote from?',
+      scoring: '1 point for the season, 3 for both.',
       players: '2–⁠4 players.',
       rules: [
-        'Everyone takes a turn of 10 questions. The player on your left holds the phone, reads out a quote from the show and shows you the photo of the scene if there is one. Name the season, then the episode.',
-        'The right season scores 1 point; get the episode right too and it’s 3. A wrong season scores nothing. Stuck? Give up to pass: no points, and you move on to the next question. Once everyone has had a turn, that’s the end of the round. Highest scorer wins.',
+        'Everyone takes a turn of 9 questions. The player on your left holds the phone, reads out a quote from the show and shows you the photo of the scene if there is one. Name the season, then the episode – its number or its title.',
+        'The right season scores 1 point; get the episode right too and it’s 3. A wrong season scores nothing, and the episode isn’t asked. Stuck? Give up to pass: no points, and you move on to the next question. Once everyone has had a turn, that’s the end of the round. Highest scorer wins.',
         'The quotes come from words you’ve already met in Define the word, so play that first.',
       ],
     },
@@ -132,8 +135,26 @@ const UI = {
 
   // Remembering things between games (step 3)
   lockedProgress: (n, of) => `${n} of ${of} words played`,
-  comingSoon: 'Coming in step 4',
-  comingSoonNote: 'This way to play is unlocked, but it hasn’t been built yet.',
+
+  // Options 2 and 3 (step 4)
+  playableCount: n => `${n} ${n === 1 ? 'word' : 'words'} to play`,
+  perTurnNote: (k, n) => `${k} ${k === 1 ? 'word' : 'words'} per turn, from the ${n} you’ve played.`,
+  notEnoughToPlay: n => `Only ${n} played ${n === 1 ? 'word' : 'words'} to use – not enough for this many players. Play more Define the word first.`,
+  theAnswer: 'The answer',
+  readWithBlank: 'Read it aloud, saying ‘blank’ for the gap.',
+  blankWarning: word => `Couldn’t find ‘${word}’ in this quote, so nothing is blanked. Please check the spreadsheet.`,
+  nameTheEpisode: 'Season first, then the episode – its number or its title.',
+  seasonEpisode: (s, e) => `Season ${s}, episode ${e}`,
+  episodeTitle: t => `‘${t}’`,
+  seasonCorrect: 'Season correct',
+  seasonWrong: 'Season wrong',
+  episodeCorrect: 'Episode correct',
+  episodeWrong: 'Episode wrong',
+  seasonRightNote: 'Season right: 1 point. Now the episode – 2 more if right.',
+  revealBlankWrong: word => `Sorry, that’s not right – the word was ${word}.`,
+  revealSeasonOnly: 'Right season, wrong episode.',
+  revealEpisodeWrong: 'Sorry, that’s not right.',
+  revealEpisodeAnswer: (s, e, title) => `Season ${s}, episode ${e}${title ? `: ‘${title}’` : ''}.`,
   resumeGame: 'Resume game',
   abandonConfirm: 'Abandon the saved game?',
   abandonYes: 'Abandon it',
@@ -169,6 +190,8 @@ const MAX_PLAYERS = 4;
 // Options 2 and 3 unlock once this many main-pool words have been asked in
 // Define the word on this device.
 const UNLOCK_WORDS = 10;
+// Options 2 and 3: nine words a turn, no bonus word (fewer if the playable set is small).
+const OPTION_PER_TURN = 9;
 const PLACEHOLDER_STILL = './assets/placeholder.svg';
 
 // Main-pool hint ladder: points for a right answer after 0, 1 or 2 hints.
@@ -201,13 +224,28 @@ function isUnlocked(type) {
   return type === 'define' || mainPlayed() >= UNLOCK_WORDS;
 }
 
+// The words Options 2 and 3 can use: main-pool words asked in Define the word
+// on this device, with a quote. Name the episode also needs the season and
+// episode number. Never bonus words.
+function playable(type) {
+  return MAIN.filter(w => Store.askCount(w.id, 'define') > 0 && w.quote !== null
+    && (type !== 'episode' || (w.season !== null && w.episode !== null)));
+}
+
+// Words per turn for Options 2 and 3: nine, or fewer so every player gets the
+// same number from the playable set. 0 means there aren't enough to play.
+function optionPerTurn(type, players) {
+  return Math.min(OPTION_PER_TURN, Math.floor(playable(type).length / players));
+}
+
 // --- state ------------------------------------------------------------------
 
 const state = {
   screen: 'front',          // front | setup | handover | question | photo | reveal | pass | final
-  overlay: null,            // null | 'rules' | 'confirmEnd' | 'settings' | 'confirmReset' | 'confirmAbandon' | 'comingSoon'
-  comingSoonType: null,     // which way to play the 'Coming in step 4' card is about
+  overlay: null,            // null | 'rules' | 'confirmEnd' | 'settings' | 'confirmReset' | 'confirmAbandon'
   setup: { type: 'define', count: 2, names: [] },
+  gameType: 'define',       // the way to play of the game in progress: define | blank | episode
+  perTurn: OPTION_PER_TURN, // words per turn in Options 2 and 3
   players: [],              // { name, score }
   turn: 0,                  // index of the current answerer
   turnScore: 0,
@@ -224,11 +262,17 @@ const state = {
 // `asked` turns true the first time the question reaches the turn screen,
 // which is when it counts as asked (see markAsked()).
 function newQuestion(word, asked = false) {
-  return word.pool === 'bonus'
-    // phase: start | guessing | coldWrong | sentence
-    ? { word, kind: 'bonus', phase: 'start', coldTried: false, note: null, asked }
-    : { word, kind: 'main', hints: 0, capped: false, note: null, asked };
+  // Bonus words (Option 1, and every tiebreak) – phase: start | guessing | coldWrong | sentence
+  if (word.pool === 'bonus') return { word, kind: 'bonus', phase: 'start', coldTried: false, note: null, asked };
+  // Option 2: one guess, 1 point
+  if (state.gameType === 'blank') return { word, kind: 'blank', note: null, asked };
+  // Option 3 – phase: season | episode
+  if (state.gameType === 'episode') return { word, kind: 'episode', phase: 'season', note: null, asked };
+  return { word, kind: 'main', hints: 0, capped: false, note: null, asked };
 }
+
+// Option 3: 1 for the season, 2 more for the episode.
+const EPISODE = { season: 1, both: 3 };
 
 function mainPoints(q) {
   return q.capped ? CAPPED_POINTS : LADDER[q.hints];
@@ -241,8 +285,14 @@ function bonusPoints(q) {
 }
 
 function pointsAvailable(q) {
+  if (q.kind === 'blank') return 1;
+  if (q.kind === 'episode') return EPISODE.both;
   return q.kind === 'main' ? mainPoints(q) : bonusPoints(q);
 }
+
+// Which way to play's ask-counts a question belongs to. Bonus words are
+// Option 1 questions wherever they appear (including Option 2/3 tiebreaks).
+const optionOf = q => (q.kind === 'bonus' || q.kind === 'main' ? 'define' : q.kind);
 
 const answerer = () => state.players[state.turn];
 const testerOf = turn => state.players[(turn + 1) % state.players.length];
@@ -263,34 +313,68 @@ function shuffle(list) {
 // Lowest ask-count first (never asked, then asked once, then twice…), random
 // within each band. This is the 'unused first' rule and also the pool reset:
 // when the unused words run short, the draw simply dips into the least-asked.
-function leastAskedFirst(words) {
+// Each way to play keeps its own ask-counts (`option`).
+function leastAskedFirst(words, option = 'define') {
   return shuffle(words)
-    .map(w => ({ w, n: Store.askCount(w.id) }))
+    .map(w => ({ w, n: Store.askCount(w.id, option) }))
     .sort((a, b) => a.n - b.n)            // stable, so the shuffle survives within a band
     .map(x => x.w);
 }
 
-// Nine main words (no two from the same quote group in one turn) then one
-// bonus word. No word is drawn twice in a game.
-function drawTurn() {
+// `n` words from `candidates` not yet drawn this game, least-asked first, no
+// two from the same quote group in one turn (unless the pool is too small).
+function drawWords(candidates, n, option) {
   const picked = [];
   const groups = new Set();
   const skipped = [];
-  for (const w of leastAskedFirst(MAIN.filter(w => !state.usedIds.has(w.id)))) {
-    if (picked.length === MAIN_PER_TURN) break;
+  for (const w of leastAskedFirst(candidates.filter(w => !state.usedIds.has(w.id)), option)) {
+    if (picked.length === n) break;
     if (w.quoteGroup !== null && groups.has(w.quoteGroup)) { skipped.push(w); continue; }
     picked.push(w);
     if (w.quoteGroup !== null) groups.add(w.quoteGroup);
   }
   // Only if the pool is too small to avoid it: fill with shared-quote siblings.
-  while (picked.length < MAIN_PER_TURN && skipped.length) {
+  while (picked.length < n && skipped.length) {
     console.warn('Not enough distinct quotes for this turn; allowing a shared-quote word.');
     picked.push(skipped.shift());
   }
-  const bonus = drawBonus();
-  const turn = [...picked, bonus].filter(Boolean);
+  return picked;
+}
+
+// Option 1: nine main words then one bonus word. Options 2 and 3: `perTurn`
+// words from the playable set, no bonus word. No word is drawn twice in a game.
+function drawTurn() {
+  const type = state.gameType;
+  const turn = type === 'define'
+    ? [...drawWords(MAIN, MAIN_PER_TURN, 'define'), drawBonus()].filter(Boolean)
+    : drawWords(playable(type), state.perTurn, type);
   turn.forEach(w => state.usedIds.add(w.id));
   return turn;
+}
+
+// Option 2: split the quote so the target word can be blanked (or highlighted
+// on the reveal card). A quote word matches if it starts with the first five
+// letters of the spreadsheet's word (its first word, letters only),
+// case-insensitive – so 'Squire (verb)' finds 'squired'. Every match is
+// blanked. The quote text itself is never changed; it's only split for display.
+// Returns { parts: [{ text, blank }], matched }.
+function blankQuote(word, quote) {
+  const base = (String(word).match(/\p{L}+/u) || [''])[0].toLowerCase();
+  const stem = base.slice(0, 5);
+  const parts = [];
+  let matched = false;
+  let last = 0;
+  if (stem) {
+    for (const m of quote.matchAll(/\p{L}+/gu)) {
+      if (!m[0].toLowerCase().startsWith(stem)) continue;
+      if (m.index > last) parts.push({ text: quote.slice(last, m.index), blank: false });
+      parts.push({ text: m[0], blank: true });
+      last = m.index + m[0].length;
+      matched = true;
+    }
+  }
+  if (last < quote.length) parts.push({ text: quote.slice(last), blank: false });
+  return { parts, matched };
 }
 
 // A bonus word not yet drawn this game (least-asked first), or undefined if
@@ -325,8 +409,10 @@ document.addEventListener('visibilitychange', () => {
 
 // --- game flow --------------------------------------------------------------
 
-function startGame(names) {
+function startGame(names, type = state.setup.type) {
   Store.clearGame();
+  state.gameType = type;
+  state.perTurn = type === 'define' ? OPTION_PER_TURN : optionPerTurn(type, names.length);
   state.players = names.map(name => ({ name, score: 0 }));
   state.usedIds = new Set();
   state.tiebreak = null;
@@ -417,7 +503,7 @@ function finishGame() {
 function markAsked() {
   if (state.screen !== 'question' || !state.q || state.q.asked) return;
   state.q.asked = true;
-  Store.recordAsked(state.q.word.id);
+  Store.recordAsked(state.q.word.id, optionOf(state.q));
 }
 
 // --- saving and resuming the game in progress ------------------------------
@@ -436,6 +522,8 @@ function serializeGame() {
   const tb = state.tiebreak;
   return {
     screen: state.screen,
+    gameType: state.gameType,
+    perTurn: state.perTurn,
     players: state.players.map(p => ({ name: p.name, score: p.score })),
     turn: state.turn,
     turnScore: state.turnScore,
@@ -466,7 +554,9 @@ function restoreGame(g) {
     if (q) delete q.wordId;
     if (!GAME_SCREENS.includes(g.screen) || !players.length) throw new Error('bad screen');
 
+    const gameType = ['define', 'blank', 'episode'].includes(g.gameType) ? g.gameType : 'define';
     Object.assign(state, {
+      gameType, perTurn: Number(g.perTurn) || OPTION_PER_TURN,
       players, questions, q,
       turn: g.turn, turnScore: g.turnScore, qIndex: g.qIndex,
       result: g.result || null,
@@ -568,9 +658,7 @@ function nextTiebreakQuestion() {
 const actions = {
   selectType(el) {
     const type = el.dataset.value;
-    if (!isUnlocked(type)) return;
-    if (type === 'define') state.setup.type = type;
-    else { state.comingSoonType = type; state.overlay = 'comingSoon'; }   // Options 2 and 3: step 4
+    if (isUnlocked(type)) state.setup.type = type;
   },
   frontStart() {
     if (Store.loadGame()) { state.overlay = 'confirmAbandon'; return; }
@@ -603,6 +691,7 @@ const actions = {
     state.setup.count = Number(el.dataset.value);
   },
   start() {
+    if (!isUnlocked(state.setup.type) || !canStart(state.setup.type, state.setup.count)) return;
     const typed = state.setup.names.slice(0, state.setup.count).map(n => (n || '').trim());
     while (typed.length < state.setup.count) typed.push('');
     Store.setNames(typed);                  // blanks stay blank, so 'Player N' isn't remembered
@@ -670,6 +759,31 @@ const actions = {
     }
   },
 
+  // Option 2 – Fill in the blank
+  blankCorrect() {
+    endQuestion(true, 1);
+  },
+  blankWrong() {
+    endQuestion(false, 0);
+  },
+
+  // Option 3 – Name the episode
+  seasonCorrect() {
+    remember();
+    state.q.phase = 'episode';
+    state.q.note = UI.seasonRightNote;
+  },
+  seasonWrong() {
+    endQuestion(false, 0);                // the episode isn't asked
+  },
+  episodeCorrect() {
+    endQuestion(true, EPISODE.both);
+  },
+  episodeWrong() {
+    endQuestion(false, EPISODE.season);   // the season point stands
+  },
+
+  // Give up is a pass in every way to play: no points for that word.
   giveUp() {
     endQuestion(false, 0);
   },
@@ -681,12 +795,16 @@ const actions = {
     else beginNextTurn();
   },
 
+  // Same way to play, same players, straight back in.
   playAgain() {
-    startGame(state.players.map(p => p.name));
+    startGame(state.players.map(p => p.name), state.gameType);
   },
+  // Back to the front card, where the way to play is chosen.
   newGame() {
     state.tiebreak = null;
-    state.screen = 'setup';
+    state.players = [];
+    state.setup.type = state.gameType;
+    state.screen = 'front';
   },
   tiebreak: startTiebreak,
 
@@ -793,12 +911,15 @@ function renderTypes() {
     const open = isUnlocked(key);
     const on = key === state.setup.type;
     const cls = !open ? ' type--locked' : on ? ' type--on' : '';
-    const progress = Math.min(mainPlayed(), UNLOCK_WORDS);
+    // Locked: the lock note and progress. Unlocked: description, scoring,
+    // players, and (Options 2 and 3) how many words there are to play.
+    const extra = !open ? UI.lockedProgress(Math.min(mainPlayed(), UNLOCK_WORDS), UNLOCK_WORDS)
+      : key !== 'define' ? UI.playableCount(playable(key).length) : '';
     return `<button type="button" class="type${cls}" data-action="selectType" data-value="${key}"
       ${open ? `aria-pressed="${on}"` : 'disabled'}>
       <span class="type__name">${esc(t.name)}</span>
-      <span class="type__blurb">${esc(open ? `${t.blurb} ${t.players}` : UI.lockedNote)}</span>
-      ${open ? '' : `<span class="type__blurb type__progress">${esc(UI.lockedProgress(progress, UNLOCK_WORDS))}</span>`}
+      <span class="type__blurb">${esc(open ? `${t.blurb} ${t.scoring} ${t.players}` : UI.lockedNote)}</span>
+      ${extra ? `<span class="type__blurb type__progress">${esc(extra)}</span>` : ''}
     </button>`;
   }).join('');
 }
@@ -881,13 +1002,24 @@ function renderSetup() {
         <h2 class="label">${esc(UI.playersHeading)}</h2>
         <div class="segs" role="group">${counts.join('')}</div>
         ${max < MAX_PLAYERS ? `<p class="hint-text">${esc(UI.notEnoughWords(max))}</p>` : ''}
+        ${perTurnLine(s.type, s.count)}
         <h2 class="label">${esc(UI.namesHeading)}</h2>
         <div class="names">${names.join('')}</div>
       </div>
     </div>
-    <div class="actions">${button('start', UI.startGame, 'btn--primary')}</div>
+    <div class="actions">${button('start', UI.startGame, 'btn--primary', canStart(s.type, s.count) ? '' : 'disabled')}</div>
   </section>`;
 }
+
+// Options 2 and 3: '9 words per turn, from the 32 you've played.' (fewer if needed).
+function perTurnLine(type, players) {
+  if (type === 'define') return '';
+  const k = optionPerTurn(type, players);
+  const n = playable(type).length;
+  return `<p class="hint-text per-turn">${esc(k > 0 ? UI.perTurnNote(k, n) : UI.notEnoughToPlay(n))}</p>`;
+}
+
+const canStart = (type, players) => type === 'define' || optionPerTurn(type, players) > 0;
 
 function renderHandover() {
   const tester = testerOf(state.turn);
@@ -907,6 +1039,15 @@ function metaLine() {
     : UI.testing(answerer().name, state.qIndex + 1, state.questions.length);
 }
 
+// Top of every turn screen: who's being tested, and a small End game in the
+// corner (it asks first, so a stray thumb can't end the game).
+function turnTop() {
+  return `<div class="turn__top">
+    <p class="turn__meta">${esc(metaLine())}</p>
+    <button type="button" class="link link--corner" data-action="askEnd">${esc(UI.endGame)}</button>
+  </div>`;
+}
+
 function renderMain() {
   const q = state.q;
   const w = q.word;
@@ -914,7 +1055,7 @@ function renderMain() {
   const hintLabel = q.hints === 0 ? UI.readQuote : q.hints === 1 ? UI.showPhoto : UI.showPhotoAgain;
 
   return `<section class="screen turn">
-    <p class="turn__meta">${esc(metaLine())}</p>
+    ${turnTop()}
     <div class="turn__grid">
       <div class="turn__word">
         <h1 class="display fit word">${esc(w.word)}</h1>
@@ -958,7 +1099,7 @@ function renderBonus() {
   const canHear = hasSentence && (q.phase === 'start' || q.phase === 'coldWrong');
 
   return `<section class="screen turn turn--bonus">
-    <p class="turn__meta">${esc(metaLine())}</p>
+    ${turnTop()}
     <div class="turn__grid">
       <div class="turn__word">
         <p class="bonus-badge">${esc(UI.bonusBadge)}</p>
@@ -990,6 +1131,77 @@ function renderBonus() {
   </section>`;
 }
 
+// Quote parts as HTML: matches as a blank (turn screen) or highlighted (reveal).
+function quoteHtml(parts, as) {
+  return parts.map(p => !p.blank ? esc(p.text)
+    : as === 'blank'
+      ? `<span class="blank" style="--len:${p.text.length}" role="img" aria-label="blank"></span>`
+      : `<mark class="hit">${esc(p.text)}</mark>`).join('');
+}
+
+// Option 2 – Fill in the blank: the quote with the word blanked, read aloud.
+function renderBlank() {
+  const w = state.q.word;
+  const { parts, matched } = blankQuote(w.word, w.quote);
+  return `<section class="screen turn turn--option">
+    ${turnTop()}
+    <div class="turn__grid">
+      <div class="turn__word">
+        ${badge(pointsAvailable(state.q))}
+        <blockquote class="quote quote--read">${quoteHtml(parts, 'blank')}</blockquote>
+        <p class="hint-text">${esc(UI.readWithBlank)}</p>
+      </div>
+      <div class="turn__panel">
+        <div class="panel">
+          <p class="panel__tag">${esc(UI.testerOnly)}</p>
+          <p class="panel__label">${esc(UI.theAnswer)}</p>
+          <p class="panel__answer">${esc(w.word)}</p>
+          <p class="panel__kw">${esc(w.definition)}</p>
+          ${matched ? '' : `<p class="panel__warning" role="alert">${esc(UI.blankWarning(w.word))}</p>`}
+        </div>
+      </div>
+    </div>
+    <div class="actions actions--turn actions--two">
+      ${button('blankCorrect', UI.correct, 'btn--correct')}
+      ${button('blankWrong', UI.wrong, 'btn--wrong')}
+      ${minorControls()}
+    </div>
+  </section>`;
+}
+
+// Option 3 – Name the episode: the quote (and its still, inline), then the
+// season, then – if the season was right – the episode.
+function renderEpisode() {
+  const q = state.q;
+  const w = q.word;
+  const episodeStage = q.phase === 'episode';
+  return `<section class="screen turn turn--option">
+    ${turnTop()}
+    <div class="turn__grid">
+      <div class="turn__word">
+        ${badge(pointsAvailable(q))}
+        ${q.note ? `<p class="note" role="status">${esc(q.note)}</p>` : `<p class="hint-text">${esc(UI.nameTheEpisode)}</p>`}
+        <blockquote class="quote quote--read">${esc(w.quote)}</blockquote>
+      </div>
+      <div class="turn__panel">
+        <div class="panel">
+          <p class="panel__tag">${esc(UI.testerOnly)}</p>
+          <p class="panel__label">${esc(UI.theAnswer)}</p>
+          <p class="panel__answer">${esc(UI.seasonEpisode(w.season, w.episode))}</p>
+          ${w.episodeTitle ? `<p class="panel__kw">${esc(UI.episodeTitle(w.episodeTitle))}</p>` : ''}
+        </div>
+      </div>
+      ${w.imageFile ? `<img class="inline-still" src="${esc(stillSrc(w))}" alt="">` : ''}
+    </div>
+    <div class="actions actions--turn actions--two">
+      ${episodeStage
+        ? button('episodeCorrect', UI.episodeCorrect, 'btn--correct') + button('episodeWrong', UI.episodeWrong, 'btn--wrong')
+        : button('seasonCorrect', UI.seasonCorrect, 'btn--correct') + button('seasonWrong', UI.seasonWrong, 'btn--wrong')}
+      ${minorControls()}
+    </div>
+  </section>`;
+}
+
 function renderPhoto() {
   const w = state.q.word;
   const overlay = w.quote && !w.quoteOnPhoto;
@@ -1005,10 +1217,24 @@ function renderReveal() {
   const r = state.result;
   const scene = w.pool === 'main' && w.sceneContext;
   const last = !state.tiebreak && state.qIndex === state.questions.length - 1 && isLastTurn();
+  const kind = state.q.kind;
+  let line, detail;
+  if (kind === 'blank') {
+    // Option 2: the full quote with the word highlighted.
+    line = r.correct ? UI.revealRight : UI.revealBlankWrong(w.word);
+    detail = `<blockquote class="quote reveal__quote">${quoteHtml(blankQuote(w.word, w.quote).parts, 'mark')}</blockquote>`;
+  } else if (kind === 'episode') {
+    // Option 3: season, episode number and title.
+    line = r.points === EPISODE.both ? UI.revealRight : r.points === EPISODE.season ? UI.revealSeasonOnly : UI.revealEpisodeWrong;
+    detail = `<p class="reveal__meaning">${esc(UI.revealEpisodeAnswer(w.season, w.episode, w.episodeTitle))}</p>`;
+  } else {
+    line = r.correct ? UI.revealRight : UI.revealWrong(w.word, w.definition);
+    detail = r.correct ? `<p class="reveal__meaning">${esc(UI.revealMeaning(w.word, w.definition))}</p>` : '';
+  }
   return `<section class="screen centre reveal ${r.correct ? 'reveal--right' : 'reveal--wrong'}">
     <div class="centre__body">
-      <h1 class="reveal__line">${esc(r.correct ? UI.revealRight : UI.revealWrong(w.word, w.definition))}</h1>
-      ${r.correct ? `<p class="reveal__meaning">${esc(UI.revealMeaning(w.word, w.definition))}</p>` : ''}
+      <h1 class="reveal__line">${esc(line)}</h1>
+      ${detail}
       ${scene ? `<p class="reveal__scene">${esc(UI.revealScene(w.sceneContext))}</p>` : ''}
       <p class="reveal__pts">${esc(UI.pointsScored(r.points))}</p>
       <p class="reveal__total">${esc(UI.runningTotal(answerer().name, answerer().score))}</p>
@@ -1162,19 +1388,6 @@ function renderSettings() {
   </div>`;
 }
 
-function renderComingSoon() {
-  return `<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="soon-title">
-    <div class="overlay__card overlay__card--small">
-      <div class="overlay__scroll">
-        <h1 class="display settings__title" id="soon-title">${esc(UI.gameTypes[state.comingSoonType].name)}</h1>
-        <p class="settings__line"><strong>${esc(UI.comingSoon)}</strong></p>
-        <p class="settings__line">${esc(UI.comingSoonNote)}</p>
-      </div>
-      <div class="overlay__actions">${button('closeOverlay', UI.close, 'btn--primary')}</div>
-    </div>
-  </div>`;
-}
-
 function renderNoData() {
   return `<section class="screen centre"><div class="centre__body">
     <h1 class="display fit">${esc(UI.title)}</h1><p class="lead">${esc(UI.noData)}</p>
@@ -1195,7 +1408,7 @@ function render() {
     case 'setup': html = renderSetup(); break;
     case 'handover': html = renderHandover(); break;
     case 'question':
-      html = state.q.kind === 'bonus' ? renderBonus() : renderMain();
+      html = { bonus: renderBonus, blank: renderBlank, episode: renderEpisode, main: renderMain }[state.q.kind]();
       if (state.q.kind === 'bonus') theme = 'dark';
       break;
     case 'photo': html = renderPhoto(); theme = 'photo'; break;
@@ -1206,7 +1419,6 @@ function render() {
   if (state.overlay === 'rules') html += renderRulesOverlay();
   if (state.overlay === 'confirmEnd') html += renderConfirmEnd();
   if (state.overlay === 'settings') html += renderSettings();
-  if (state.overlay === 'comingSoon') html += renderComingSoon();
   if (state.overlay === 'confirmReset') html += renderConfirm('reset-title', UI.resetConfirm, 'confirmReset', UI.resetYes, 'showSettings', UI.cancel);
   if (state.overlay === 'confirmAbandon') html += renderConfirm('abandon-title', UI.abandonConfirm, 'confirmAbandon', UI.abandonYes, 'closeOverlay', UI.abandonNo);
 

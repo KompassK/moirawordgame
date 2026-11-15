@@ -34,7 +34,7 @@ function fresh(datasetId = ID, store = memoryBackend()) {
   backend = store;
   Store.init(datasetId, store);
   Object.assign(state, {
-    screen: 'front', overlay: null, setup: { type: 'define', count: 2, names: [] },
+    screen: 'front', overlay: null, setup: { type: 'define', count: 2, names: [] }, gameType: 'define',
     players: [], tiebreak: null, usedIds: new Set(), q: null, questions: [], history: [], undo: null, result: null,
   });
   render();
@@ -208,11 +208,11 @@ test('Unlock: locked at 9 main words (count shown), bonus words don’t count, u
   assert(isUnlocked('blank') && isUnlocked('episode'), 'unlocked at 10');
   const open = document.querySelector('[data-action="selectType"][data-value="episode"]');
   assert(!open.disabled, 'box enabled');
-  assert(!open.querySelector('.type__progress'), 'no count once unlocked');
+  // Step 4: once unlocked, the box shows the playable set instead of the progress.
+  eq(open.querySelector('.type__progress').textContent, '10 words to play', 'playable set shown once unlocked');
   tap('selectType', 'episode');
-  eq(state.overlay, 'comingSoon', '‘Coming in step 4’ card');
-  eq(state.setup.type, 'define', 'still Define the word');
-  tap('closeOverlay');
+  eq(state.setup.type, 'episode', 'can be chosen');
+  state.setup.type = 'define';
 });
 
 test('Unlock counts each word once, however often it was asked', () => {
@@ -380,15 +380,6 @@ test('Corrupt or unknown storage starts fresh', () => {
   eq(Store.askCount(mainIds[0]), 0, 'unknown schema version: empty');
   beginTestGame(2);
   eq(Store.askCount(state.q.word.id), 1, 'and it writes a fresh record');
-  eq(JSON.parse(store.getItem('sesquipedalian')).schemaVersion, 1, 'schemaVersion 1');
+  eq(JSON.parse(store.getItem('sesquipedalian')).schemaVersion, 2, 'current schemaVersion (2 since step 4)');
 });
 
-// --- report -----------------------------------------------------------------
-
-const failed = results.filter(r => !r.ok);
-document.getElementById('results').innerHTML = `
-  <h1 class="${failed.length ? 'fail' : 'pass'}">${results.length - failed.length} of ${results.length} tests passed</h1>
-  <ol>${results.map(r => `<li class="${r.ok ? 'pass' : 'fail'}">${r.ok ? '✓' : '✗'} ${esc(r.name)}${r.ok ? '' : `<pre>${esc(r.error)}</pre>`}</li>`).join('')}</ol>`;
-document.title = `Sesquipedalian tests: ${failed.length ? 'FAIL' : 'PASS'} (${results.length - failed.length}/${results.length})`;
-console.log(document.title);
-failed.forEach(r => console.error(r.name, r.error));
