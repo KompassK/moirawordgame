@@ -13,7 +13,7 @@
 
 'use strict';
 
-const VERSION = {"commit":"2dc336d","dirty":true,"builtAt":"2026-11-15T20:49:32.141Z"};
+const VERSION = {"commit":"0e16aad","dirty":false,"builtAt":"2026-11-15T20:58:10.632Z"};
 const SHELL = [
   "index.html",
   "style.css",
