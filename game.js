@@ -130,6 +130,10 @@ const UI = {
   endYes: 'End game',
   endNo: 'Keep playing',
 
+  // Version stamp on the front card: 'v f0dfa17 · 28 Sep 2026 14:05'.
+  // '+' after the commit means it was built with uncommitted changes.
+  version: (commit, dirty, when) => `v ${commit}${dirty ? '+' : ''} · ${when}`,
+
   noData: 'The word list didn’t load. Run npm run build, then reload this page.',
 };
 
@@ -635,8 +639,21 @@ function renderFront() {
       </div>
       <div class="types" role="group" aria-label="${esc(UI.waysToPlay)}">${renderTypes()}</div>
     </div>
-    <div class="actions">${button('frontStart', UI.frontStart, 'btn--primary')}</div>
+    <div class="actions">
+      ${button('frontStart', UI.frontStart, 'btn--primary')}
+      ${versionStamp()}
+    </div>
   </section>`;
+}
+
+// '28 Sep 2026 14:05' in the device's time zone; empty if version.js is missing.
+function versionStamp() {
+  const v = window.MOIRA_VERSION;
+  if (!v) return '';
+  const d = new Date(v.builtAt);
+  const date = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/,/g, '');
+  const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  return `<p class="version">${esc(UI.version(v.commit, v.dirty, `${date} ${time}`))}</p>`;
 }
 
 // Most players the chosen way to play allows. Define the word is also capped

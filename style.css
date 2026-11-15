@@ -199,6 +199,15 @@ body[data-theme="dark"] .link { color: var(--night-soft); }
 
 .front__body .types { margin-top: 2px; }
 
+/* Version stamp under Start: small, grey, out of the way. */
+.version {
+  margin: -2px 0 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 /* --- setup -------------------------------------------------------------- */
 
 .topbar {
