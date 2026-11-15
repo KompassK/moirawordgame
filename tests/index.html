@@ -25,7 +25,12 @@
   <div id="results"><h1>Running…</h1></div>
 
   <script src="version.js"></script>
-  <script src="words.js"></script>
+  <!-- The word list: the dummy fixture by default (tests/fixtures, built with
+       `npm run build -- data/dummy/…`), or the real words.js with ?data=live. -->
+  <script>
+    document.write('<script src="' + (/[?&]data=live\b/.test(location.search)
+      ? 'words.js' : 'tests/fixtures/dummy-words.js') + '"><\/script>');
+  </script>
   <script src="storage.js"></script>
   <script src="pwa.js"></script>
   <script src="game.js"></script>
@@ -33,6 +38,7 @@
   <script src="tests/step4.test.js"></script>
   <script src="tests/step5.test.js"></script>
   <script src="tests/step6.test.js"></script>
+  <script src="tests/live.test.js"></script>
   <script src="tests/report.js"></script>
 </body>
 </html>

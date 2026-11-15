@@ -1,6 +1,8 @@
 // Step 5 tests: real stills, the placeholder fallback, the quote overlay,
 // and the shared renderer. Uses the harness in step3.test.js and the helpers
-// in step4.test.js. The four test stills are fixtures in assets/stills/.
+// in step4.test.js. The four test stills are fixtures in assets/stills/, used by
+// dummy words 9001–9004, so these run on the dummy data only; live.test.js
+// checks the same rules against the live data.
 
 'use strict';
 
@@ -27,7 +29,7 @@ function showPhotoOf(id) {
   return document.querySelector('.photo .still');
 }
 
-test('Stills: a word’s still is assets/stills/<imageFile>; no imageFile → the placeholder', () => {
+testDummy('Stills: a word’s still is assets/stills/<imageFile>; no imageFile → the placeholder', () => {
   eq(stillSrc(W(STILL_16x9)), './assets/stills/test-16x9.jpg', 'jpg fixture');
   eq(stillSrc(W(STILL_1x1)), './assets/stills/test-1x1.webp', 'webp fixture');
   withWords([[W(9010), { imageFile: null }]], () => {
@@ -35,7 +37,7 @@ test('Stills: a word’s still is assets/stills/<imageFile>; no imageFile → th
   });
 });
 
-test('Stills: a file that fails to load falls back to the placeholder, silently', async () => {
+testDummy('Stills: a file that fails to load falls back to the placeholder, silently', async () => {
   const word = W(9010);
   const restore = { ...word };
   Object.assign(word, { imageFile: 'definitely-not-there.jpg' });
@@ -50,7 +52,7 @@ test('Stills: a file that fails to load falls back to the placeholder, silently'
   } finally { Object.assign(word, restore); }
 });
 
-test('Photo screen: the frame takes the image’s shape (3:4 portrait loads as 0.75), contain, nothing else on screen', async () => {
+testDummy('Photo screen: the frame takes the image’s shape (3:4 portrait loads as 0.75), contain, nothing else on screen', async () => {
   const still = showPhotoOf(STILL_3x4);
   const img = still.querySelector('img');
   await until(() => img.complete && img.naturalWidth > 0, 4000, 'the 3:4 still to load');
@@ -62,7 +64,7 @@ test('Photo screen: the frame takes the image’s shape (3:4 portrait loads as 0
   eq(state.screen, 'question', 'a tap anywhere returns');
 });
 
-test('Overlay: the quote is drawn over the still, the word in the display font', () => {
+testDummy('Overlay: the quote is drawn over the still, the word in the display font', () => {
   const still = showPhotoOf(STILL_16x9);
   const band = still.querySelector('.still__band');
   assert(band, 'band drawn');
@@ -73,7 +75,7 @@ test('Overlay: the quote is drawn over the still, the word in the display font',
   assert(!getComputedStyle(band.querySelector('.still__quote')).fontFamily.includes('Josefin'), 'the rest in the body font');
 });
 
-test('Overlay: skipped when quoteOnPhoto is true (the still already carries the quote)', () => {
+testDummy('Overlay: skipped when quoteOnPhoto is true (the still already carries the quote)', () => {
   eq(W(STILL_4x3_ON_PHOTO).quoteOnPhoto, true, 'fixture is marked quoteOnPhoto');
   const still = showPhotoOf(STILL_4x3_ON_PHOTO);
   assert(still, 'still shown');
@@ -81,13 +83,13 @@ test('Overlay: skipped when quoteOnPhoto is true (the still already carries the 
   assert(!document.querySelector('.photo').textContent.trim(), 'no text at all');
 });
 
-test('Overlay text is at least 24px on a phone-sized photo screen', async () => {
+testDummy('Overlay text is at least 24px on a phone-sized photo screen', async () => {
   const still = showPhotoOf(STILL_16x9);
   await until(() => still.querySelector('img').complete, 4000, 'load');
   assert(parseFloat(getComputedStyle(still.querySelector('.still__quote')).fontSize) >= 24, 'at least 24px');
 });
 
-test('Option 3 inline photo uses the same renderer, overlay included (and skipped for quoteOnPhoto)', () => {
+testDummy('Option 3 inline photo uses the same renderer, overlay included (and skipped for quoteOnPhoto)', () => {
   fresh();
   playedInDefine(18);
   beginOption('episode', 2);
@@ -100,7 +102,7 @@ test('Option 3 inline photo uses the same renderer, overlay included (and skippe
   tap('askEnd'); tap('confirmEnd');
 });
 
-test('Lazy loading: a word’s still is fetched when its question comes up, and the next word’s ahead of time', () => {
+testDummy('Lazy loading: a word’s still is fetched when its question comes up, and the next word’s ahead of time', () => {
   fresh();
   beginTestGame(2);
   prefetchedStills.clear();

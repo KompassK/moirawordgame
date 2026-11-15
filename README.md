@@ -1,3 +1,3 @@
-Sesquipedalian is a pass-the-phone Moira Rose vocabulary game for the family: a static single-page web app (open `index.html` to play).
-To rebuild the word list from the spreadsheet: `npm install && npm run build`
-The spreadsheet in `data/` is a dummy test set. It is not real show data.
+Sesquipedalian is a pass-the-phone Moira Rose vocabulary game for the family: a static single-page web app (open `index.html` to play, or https://kompassk.github.io/moirawordgame/).
+To rebuild the word list: `npm install && npm run build`. The spreadsheet holds the answers, so it lives **outside the repo** – put `Moira words database.xlsx` in `data/` (and the stills in `data/images/`) locally before building; only the generated `words.js`/`words.json` and the stills in `assets/stills/` are committed.
+Tests: `npm test` (build and service worker), and open `tests/index.html` (dummy data, from `npm run build -- data/dummy/<dummy file>.xlsx`) or `tests/index.html?data=live` (the real word list) in a browser.

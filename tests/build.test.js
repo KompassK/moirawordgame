@@ -19,36 +19,43 @@ function test(name, fn) {
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'stills-'));
 ['present.jpg', 'also.webp', 'shot.png'].forEach(f => fs.writeFileSync(path.join(dir, f), ''));
 
-test('Build warning: a missing still is listed (by name, once), present ones are not', () => {
+test('Build warning: a missing still is reported by word ID, never by filename (filenames can contain the word)', () => {
   const words = [
-    { imageFile: 'present.jpg' }, { imageFile: 'missing.jpg' }, { imageFile: 'missing.jpg' },
-    { imageFile: 'also.webp' }, { imageFile: null },
+    { id: 1, imageFile: 'present.jpg' }, { id: 7, imageFile: 'missing.jpg' }, { id: 3, imageFile: 'missing.jpg' },
+    { id: 4, imageFile: 'also.webp' }, { id: 5, imageFile: null },
   ];
   const r = checkStills(words, dir);
-  assert.deepStrictEqual(r.missing, ['missing.jpg']);
+  assert.deepStrictEqual(r.missing, [{ file: 'missing.jpg', ids: [7, 3] }]);
   const lines = stillsWarnings(r);
   assert.strictEqual(lines.length, 1);
-  assert.match(lines[0], /^Warning: 1 image file\(s\) not found in assets\/stills\/ \(the game will show the placeholder\): missing\.jpg$/);
+  assert.strictEqual(lines[0], 'Warning: 1 image file(s) not found in assets/stills/ (the game will show the placeholder), for IDs 3, 7');
+  assert.ok(!lines[0].includes('missing.jpg'), 'no filename in the warning');
 });
 
-test('Build warning: jpg, jpeg, png and webp are accepted; anything else is flagged', () => {
-  const r = checkStills([{ imageFile: 'shot.png' }, { imageFile: 'a.JPEG' }, { imageFile: 'b.gif' }, { imageFile: 'c.heic' }], dir);
-  assert.deepStrictEqual(r.unsupported, ['b.gif', 'c.heic']);
-  assert.ok(stillsWarnings(r).some(l => l.startsWith('Warning: 2 image file(s) not in an accepted format')));
+test('Build warning: jpg, jpeg, png and webp are accepted; anything else is flagged (by ID)', () => {
+  const r = checkStills([{ id: 1, imageFile: 'shot.png' }, { id: 2, imageFile: 'a.JPEG' }, { id: 3, imageFile: 'b.gif' }, { id: 4, imageFile: 'c.heic' }], dir);
+  assert.deepStrictEqual(r.unsupported.map(e => e.file), ['b.gif', 'c.heic']);
+  assert.ok(stillsWarnings(r).some(l => l === 'Warning: 2 image file(s) not in an accepted format (.jpg, .jpeg, .png, .webp), for IDs 3, 4'));
 });
 
 test('Build warning: nothing to say when every still is there', () => {
-  assert.deepStrictEqual(stillsWarnings(checkStills([{ imageFile: 'present.jpg' }, { imageFile: null }], dir)), []);
+  assert.deepStrictEqual(stillsWarnings(checkStills([{ id: 1, imageFile: 'present.jpg' }, { id: 2, imageFile: null }], dir)), []);
 });
 
-test('Real data: the four test stills are found; the other dummy words are the only missing ones', () => {
+test('Real data (live): every still a live word names is in assets/stills, in an accepted format', () => {
   const root = path.join(__dirname, '..');
   const { words } = JSON.parse(fs.readFileSync(path.join(root, 'words.json'), 'utf8'));
   const r = checkStills(words, path.join(root, 'assets', 'stills'));
-  const fixtures = ['test-16x9.jpg', 'test-4x3.png', 'test-1x1.webp', 'test-3x4.png'];
-  fixtures.forEach(f => assert.ok(!r.missing.includes(f), `${f} should be found`));
-  assert.ok(r.missing.every(f => f.startsWith('dummy_')), 'only dummy_*.jpg names missing');
-  assert.deepStrictEqual(r.unsupported, []);
+  assert.deepStrictEqual(r.missing.flatMap(e => e.ids), [], 'IDs whose still is missing');
+  assert.deepStrictEqual(r.unsupported.flatMap(e => e.ids), [], 'IDs with an unsupported format');
+});
+
+test('Real data (dummy fixture): the four test stills are found; only the made-up dummy_*.jpg are missing', () => {
+  const root = path.join(__dirname, '..');
+  const { words } = JSON.parse(fs.readFileSync(path.join(root, 'tests', 'fixtures', 'dummy-words.json'), 'utf8'));
+  const r = checkStills(words, path.join(root, 'assets', 'stills'));
+  ['test-16x9.jpg', 'test-4x3.png', 'test-1x1.webp', 'test-3x4.png'].forEach(f => assert.ok(!r.missing.some(e => e.file === f), f + ' should be found'));
+  assert.ok(r.missing.length === 32 && r.missing.every(e => e.file.startsWith('dummy_')), 'only the 32 dummy_*.jpg');
 });
 
 // --- the service worker's precache list (step 6) ------------------------------
@@ -85,7 +92,9 @@ test('Precache check: the build stops with a clear message when the list is inco
       fs.copyFileSync(path.join(root, f), path.join(copy, f));
     }
     fs.cpSync(path.join(root, 'assets'), path.join(copy, 'assets'), { recursive: true });
-    fs.cpSync(path.join(root, 'data', 'dummy'), path.join(copy, 'data', 'dummy'), { recursive: true });
+    // The build reads the first .xlsx in data/: give the copy the dummy one (never the live one).
+    fs.mkdirSync(path.join(copy, 'data'));
+    fs.copyFileSync(path.join(root, 'data', 'dummy', 'Moira words database - DUMMY TEST DATA.xlsx'), path.join(copy, 'data', 'dummy.xlsx'));
     fs.cpSync(path.join(root, 'scripts'), path.join(copy, 'scripts'), { recursive: true });
     fs.symlinkSync(path.join(root, 'node_modules'), path.join(copy, 'node_modules'), 'junction');
     const shellFile = path.join(copy, 'scripts', 'shell.js');

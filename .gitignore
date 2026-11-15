@@ -8,3 +8,10 @@ Thumbs.db
 
 # Local Claude Code preview config
 .claude/
+
+# The spreadsheets hold the answers and stay out of the repo (step 7); the
+# build needs them present locally. Only the generated words.json/words.js and
+# the referenced stills in assets/stills/ are committed.
+data/*.xlsx
+data/**/*.xlsx
+data/images/

@@ -720,7 +720,9 @@ const actions = {
       return;
     }
     remember();
-    q.hints++;
+    // No quote (e.g. live ID 113): skip the 'Read the quote' rung – straight
+    // to the photo, so the points step 4 → 2.
+    q.hints = q.word.quote === null ? LAST_RUNG : q.hints + 1;
     q.note = null;
     if (q.hints === LAST_RUNG) {
       q.note = UI.lastChanceNote;
@@ -1162,7 +1164,8 @@ function renderMain() {
   const q = state.q;
   const w = q.word;
   const quoteOn = q.hints >= 1;
-  const hintLabel = q.hints === 0 ? UI.readQuote : q.hints === 1 ? UI.showPhoto : UI.showPhotoAgain;
+  const hintLabel = q.hints === 0 && w.quote !== null ? UI.readQuote
+    : q.hints < LAST_RUNG ? UI.showPhoto : UI.showPhotoAgain;
 
   return `<section class="screen turn">
     ${turnTop()}
@@ -1185,7 +1188,7 @@ function renderMain() {
           <p class="panel__label">${esc(UI.quoteLabel)}</p>
           <blockquote class="quote">${esc(w.quote)}</blockquote>
         </div>` : ''}
-        ${w.sceneContext ? `<div class="reveal-block${quoteOn ? ' is-on' : ''}">
+        ${w.quote && w.sceneContext ? `<div class="reveal-block${quoteOn ? ' is-on' : ''}">
           <p class="panel__label">${esc(UI.sceneLabel)}</p>
           <p class="scene">${esc(w.sceneContext)}</p>
         </div>` : ''}
@@ -1323,7 +1326,8 @@ function renderPhoto() {
 function renderReveal() {
   const w = state.q.word;
   const r = state.result;
-  const scene = w.pool === 'main' && w.sceneContext;
+  // The scene line belongs with the quote: a word with no quote (live ID 113) gets none.
+  const scene = w.pool === 'main' && w.quote !== null && w.sceneContext;
   const last = !state.tiebreak && state.qIndex === state.questions.length - 1 && isLastTurn();
   const kind = state.q.kind;
   let line, detail;

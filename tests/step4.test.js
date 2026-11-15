@@ -192,6 +192,9 @@ test('Fill in the blank turn and reveal: blank shown, answer in the tester panel
   fresh();
   playedInDefine(18);
   beginOption('blank', 2);
+  // A word whose quote can be blanked (live data has one that can't: see live.test.js).
+  const blankable = state.questions.find(x => blankQuote(x.word, x.quote).matched);
+  setQuestion(blankable); render();
   const w = state.q.word;
   eq(state.q.kind, 'blank', 'Option 2 question');
   assert(document.querySelector('.quote--read .blank'), 'blank in the quote');
@@ -225,7 +228,8 @@ test('Name the episode scoring: season wrong 0 (episode not asked); season only 
   eq(score(), 1, 'season only: 1');
   eq(document.querySelector('.reveal__line').textContent, 'Right season, wrong episode.', 'season-only line');
   const w = state.q.word;
-  eq(document.querySelector('.reveal__meaning').textContent, `Season ${w.season}, episode ${w.episode}: ‘${w.episodeTitle}’.`, 'season, episode and title');
+  eq(document.querySelector('.reveal__meaning').textContent, UI.revealEpisodeAnswer(w.season, w.episode, w.episodeTitle), 'season, episode and title');
+  assert(document.querySelector('.reveal__meaning').textContent.startsWith(`Season ${w.season}, episode ${w.episode}`), 'starts with season and episode');
   tap('next');
   tap('seasonCorrect'); tap('episodeCorrect');
   eq(score(), 4, 'both: 3 more');

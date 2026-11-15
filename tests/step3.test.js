@@ -11,6 +11,14 @@ const results = [];
 function test(name, fn) {
   queued.push({ name, fn });
 }
+
+// Which word list the page loaded (tests/index.html: the dummy fixture by
+// default, the real words.js with ?data=live). Tests that depend on the dummy
+// fixtures (the four test stills, specific dummy IDs) run on dummy only;
+// tests of the live data's quirks run on live only; everything else on both.
+const LIVE = /[?&]data=live\b/.test(location.search);
+function testDummy(name, fn) { queued.push({ name, fn, skip: LIVE && 'dummy data only' }); }
+function testLive(name, fn) { queued.push({ name, fn, skip: !LIVE && 'live data only' }); }
 function assert(cond, message) { if (!cond) throw new Error(message); }
 function eq(got, want, message) {
   if (JSON.stringify(got) !== JSON.stringify(want)) throw new Error(`${message}: got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
@@ -72,7 +80,10 @@ function finishTurn() {
   tap('bonusGuess'); tap('bonusCorrect');
 }
 
-const mainIds = MAIN.map(w => w.id);
+// Main-pool IDs, complete words first (quote, season and episode), so tests that
+// take "the first n" get words every way to play can use – on any data set.
+const complete = w => w.quote !== null && w.season !== null && w.episode !== null;
+const mainIds = [...MAIN.filter(complete), ...MAIN.filter(w => !complete(w))].map(w => w.id);
 const bonusIds = BONUS_POOL.map(w => w.id);
 const record = (ids, times = 1) => ids.forEach(id => { for (let i = 0; i < times; i++) Store.recordAsked(id); });
 
@@ -348,8 +359,8 @@ test('Settings card: words played per pool, and Reset word history (current data
   state.screen = 'front'; render();
   tap('showSettings');
   const text = document.querySelector('.overlay').textContent.replace(/\s+/g, ' ');
-  assert(text.includes('Main: 24 of 36 played'), `main line in: ${text}`);  // 23 + the one asked
-  assert(text.includes('Bonus: 6 of 14 played'), 'bonus line');
+  assert(text.includes(`Main: 24 of ${MAIN.length} played`), `main line in: ${text}`);  // 23 + the one asked
+  assert(text.includes(`Bonus: 6 of ${BONUS_POOL.length} played`), 'bonus line');
   assert(text.includes('Kath, David'), 'names');
   tap('askReset'); eq(state.overlay, 'confirmReset', 'confirm first');
   tap('showSettings'); eq(Store.playedCount(mainIds), 24, 'Cancel keeps history');
