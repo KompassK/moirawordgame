@@ -5,7 +5,8 @@
   "description": "Sesquipedalian: a pass-the-phone Moira Rose vocabulary game.",
   "scripts": {
     "build": "node scripts/build-words.js",
-    "icons": "node scripts/build-icons.js"
+    "icons": "node scripts/build-icons.js",
+    "test": "node tests/build.test.js"
   },
   "dependencies": {
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-15T19:48:43.217Z",
+  "generatedAt": "2026-11-15T20:01:05.231Z",
   "source": "Moira words database - DUMMY TEST DATA.xlsx",
   "datasetId": "f7f1920f-50",
   "words": [
@@ -15,7 +15,7 @@
       "episode": 1,
       "episodeTitle": "Test Episode One",
       "sceneContext": "Nora has just tasted Deirdre's prize-winning casserole at the fete and cannot hide her astonishment, to Deirdre's visible delight.",
-      "imageFile": "dummy_flabbergasted.jpg",
+      "imageFile": "test-16x9.jpg",
       "quoteOnPhoto": false,
       "pool": "main",
       "exampleSentence": null
@@ -32,8 +32,8 @@
       "episode": 2,
       "episodeTitle": "Test Episode Two",
       "sceneContext": "Nora has just been told she must share a dressing room with the understudy, and is refusing to accept it with a straight face.",
-      "imageFile": "dummy_preposterous.jpg",
-      "quoteOnPhoto": false,
+      "imageFile": "test-4x3.png",
+      "quoteOnPhoto": true,
       "pool": "main",
       "exampleSentence": null
     },
@@ -49,7 +49,7 @@
       "episode": 3,
       "episodeTitle": "Test Episode Three",
       "sceneContext": "Deirdre has turned up uninvited with advice about Nora's garden, and Nora is not having it.",
-      "imageFile": "dummy_meddlesome.jpg",
+      "imageFile": "test-1x1.webp",
       "quoteOnPhoto": false,
       "pool": "main",
       "exampleSentence": null
@@ -66,7 +66,7 @@
       "episode": 4,
       "episodeTitle": "Test Episode Four",
       "sceneContext": "Desmond has questioned whether the new chandelier is a bit much, and Nora is having none of it.",
-      "imageFile": "dummy_ostentatious.jpg",
+      "imageFile": "test-3x4.png",
       "quoteOnPhoto": false,
       "pool": "main",
       "exampleSentence": null

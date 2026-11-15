@@ -4,10 +4,12 @@
 
 'use strict';
 
+// Tests are queued here and run in order by report.js, which waits for any
+// test that returns a promise (e.g. waiting for an image to load).
+const queued = [];
 const results = [];
 function test(name, fn) {
-  try { fn(); results.push({ name, ok: true }); }
-  catch (e) { results.push({ name, ok: false, error: e && e.stack || String(e) }); }
+  queued.push({ name, fn });
 }
 function assert(cond, message) { if (!cond) throw new Error(message); }
 function eq(got, want, message) {

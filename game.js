@@ -862,9 +862,92 @@ function joinNames(names) {
   return names.length < 2 ? names.join('') : names.slice(0, -1).join(', ') + ' and ' + names.at(-1);
 }
 
+// --- stills (step 5) ----------------------------------------------------------
+// A word's still is ./assets/stills/<imageFile> (jpg, png or webp). If it has
+// none, or the file won't load, the placeholder is used – silently.
+
+const STILLS_DIR = './assets/stills/';
+const failedStills = new Set();      // srcs that failed to load: use the placeholder from now on
+const stillRatios = new Map();       // src → width / height, once loaded (so re-renders don't jump)
+const prefetchedStills = new Map();  // src → Image, fetched ahead of time
+
 function stillSrc(word) {
-  // Real stills arrive in step 5 as ./assets/stills/<imageFile>.
-  return PLACEHOLDER_STILL;
+  if (!word.imageFile) return PLACEHOLDER_STILL;
+  const src = STILLS_DIR + encodeURIComponent(word.imageFile);
+  return failedStills.has(src) ? PLACEHOLDER_STILL : src;
+}
+
+// Fetch a still before it's needed: the current word's when its question comes
+// up, and the next word's while this one is on screen. Nothing at page load.
+function prefetchStill(word) {
+  if (!word || word.pool !== 'main') return;
+  const src = stillSrc(word);
+  if (src === PLACEHOLDER_STILL || prefetchedStills.has(src)) return;
+  const img = new Image();
+  img.onload = () => stillRatios.set(src, img.naturalWidth / img.naturalHeight);
+  img.onerror = () => failedStills.add(src);
+  img.src = src;
+  prefetchedStills.set(src, img);
+}
+
+function prefetchStills() {
+  if (state.screen !== 'question' || !state.q) return;
+  prefetchStill(state.q.word);
+  prefetchStill(state.questions[state.qIndex + 1]);
+}
+
+// The one still renderer, used full-screen (photo hint) and inline (Option 3),
+// so the two never drift apart. The frame takes the image's own shape (its
+// aspect ratio, once known), so the quote band sits on the lower part of the
+// picture itself, not on letterboxing. Unless the still already carries the
+// quote (`quoteOnPhoto`), the quote is drawn over it: the word in the display
+// font, the rest in the body font.
+function renderStill(word, variant) {
+  const src = stillSrc(word);
+  const ratio = stillRatios.get(src) || 16 / 9;   // until it loads; the placeholder is 16:9
+  const overlay = word.quote && !word.quoteOnPhoto;
+  const quote = overlay
+    ? blankQuote(word.word, word.quote).parts.map(p => p.blank ? `<span class="still__word">${esc(p.text)}</span>` : esc(p.text)).join('')
+    : '';
+  return `<figure class="still still--${variant}" style="--r:${ratio.toFixed(4)}">
+    <img class="still__img" src="${esc(src)}" alt="" decoding="async">
+    ${overlay ? `<figcaption class="still__band"><p class="still__quote">${quote}</p></figcaption>` : ''}
+  </figure>`;
+}
+
+// Loading and failure, for every still on the page (load and error don't
+// bubble, so listen in the capture phase).
+document.addEventListener('load', e => {
+  const img = e.target;
+  if (!(img instanceof HTMLImageElement) || !img.classList.contains('still__img')) return;
+  const ratio = img.naturalWidth / img.naturalHeight;
+  if (!ratio) return;
+  stillRatios.set(img.getAttribute('src'), ratio);
+  img.closest('.still').style.setProperty('--r', ratio.toFixed(4));
+}, true);
+
+document.addEventListener('error', e => {
+  const img = e.target;
+  if (!(img instanceof HTMLImageElement) || !img.classList.contains('still__img')) return;
+  const src = img.getAttribute('src');
+  if (src === PLACEHOLDER_STILL) return;
+  failedStills.add(src);
+  img.src = PLACEHOLDER_STILL;          // silently
+}, true);
+
+// While the photo is up, the tester turns the device round: ask the browser to
+// keep the current orientation. Most phones only allow this in fullscreen
+// (and iPhones not at all), so failure is expected and ignored – the photo
+// screen looks right either way up.
+let orientationLocked = false;
+function holdOrientation(on) {
+  const o = screen.orientation;
+  if (!o || on === orientationLocked) return;
+  orientationLocked = on;
+  try {
+    if (on) o.lock(o.type).catch(() => { orientationLocked = false; });
+    else o.unlock();
+  } catch (e) { orientationLocked = false; }
 }
 
 function button(action, label, cls = '', attrs = '') {
@@ -1191,7 +1274,7 @@ function renderEpisode() {
           ${w.episodeTitle ? `<p class="panel__kw">${esc(UI.episodeTitle(w.episodeTitle))}</p>` : ''}
         </div>
       </div>
-      ${w.imageFile ? `<img class="inline-still" src="${esc(stillSrc(w))}" alt="">` : ''}
+      ${w.imageFile ? renderStill(w, 'inline') : ''}
     </div>
     <div class="actions actions--turn actions--two">
       ${episodeStage
@@ -1202,13 +1285,11 @@ function renderEpisode() {
   </section>`;
 }
 
+// The photo hint: the still, full-screen on black, nothing else. A tap
+// anywhere returns (the label is for screen readers only).
 function renderPhoto() {
-  const w = state.q.word;
-  const overlay = w.quote && !w.quoteOnPhoto;
   return `<section class="photo" data-action="closePhoto" role="button" aria-label="${esc(UI.photoBack)}">
-    <img class="photo__img" src="${esc(stillSrc(w))}" alt="">
-    ${overlay ? `<div class="photo__band"><p class="photo__quote">${esc(w.quote)}</p></div>` : ''}
-    <p class="photo__back">${esc(UI.photoBack)}</p>
+    ${renderStill(state.q.word, 'full')}
   </section>`;
 }
 
@@ -1427,6 +1508,8 @@ function render() {
   app.innerHTML = html;
   fitAll();
   markAsked();
+  prefetchStills();
+  holdOrientation(state.screen === 'photo');
 
   // Start each new screen or question at the top.
   const key = `${state.screen}:${state.turn}:${state.qIndex}:${state.q && state.q.word.id}`;

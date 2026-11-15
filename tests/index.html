@@ -4,7 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sesquipedalian tests</title>
-  <link rel="stylesheet" href="../style.css">
+  <!-- Resolve every relative URL from the project root, as index.html does,
+       so the game's './assets/…' paths (stills, placeholder, fonts) work here. -->
+  <base href="../">
+  <link rel="stylesheet" href="style.css">
   <style>
     /* The game renders off-screen; only the results show. */
     #app { position: absolute; left: -10000px; top: 0; width: 390px; }
@@ -13,18 +16,21 @@
     .pass { color: #35664a; } .fail { color: #a13c33; font-weight: 700; }
     #results li { margin: 4px 0; }
     #results pre { white-space: pre-wrap; margin: 2px 0 0 18px; font-size: 13px; }
+    /* The photo screen is full-screen (position: fixed): keep it out of sight too. */
+    .photo { left: -10000px; right: auto; width: 100vw; }
   </style>
 </head>
 <body>
   <main id="app"></main>
   <div id="results"><h1>Running…</h1></div>
 
-  <script src="../version.js"></script>
-  <script src="../words.js"></script>
-  <script src="../storage.js"></script>
-  <script src="../game.js"></script>
-  <script src="./step3.test.js"></script>
-  <script src="./step4.test.js"></script>
-  <script src="./report.js"></script>
+  <script src="version.js"></script>
+  <script src="words.js"></script>
+  <script src="storage.js"></script>
+  <script src="game.js"></script>
+  <script src="tests/step3.test.js"></script>
+  <script src="tests/step4.test.js"></script>
+  <script src="tests/step5.test.js"></script>
+  <script src="tests/report.js"></script>
 </body>
 </html>
