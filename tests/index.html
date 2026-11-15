@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sesquipedalian tests</title>
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    /* The game renders off-screen; only the results show. */
+    #app { position: absolute; left: -10000px; top: 0; width: 390px; }
+    #results { font: 16px/1.5 system-ui, sans-serif; padding: 16px; max-width: 900px; margin: 0 auto; }
+    #results h1 { font-size: 22px; margin: 0 0 12px; }
+    .pass { color: #35664a; } .fail { color: #a13c33; font-weight: 700; }
+    #results li { margin: 4px 0; }
+    #results pre { white-space: pre-wrap; margin: 2px 0 0 18px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <main id="app"></main>
+  <div id="results"><h1>Running…</h1></div>
+
+  <script src="../version.js"></script>
+  <script src="../words.js"></script>
+  <script src="../storage.js"></script>
+  <script src="../game.js"></script>
+  <script src="./step3.test.js"></script>
+</body>
+</html>

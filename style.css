@@ -199,6 +199,36 @@ body[data-theme="dark"] .link { color: var(--night-soft); }
 
 .front__body .types { margin-top: 2px; }
 
+/* Settings gear, top right of the front card: small to look at, big to tap. */
+.front { position: relative; padding-top: calc(env(safe-area-inset-top) + 56px); }   /* clear of the gear */
+
+.gear {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 8px);
+  right: calc(env(safe-area-inset-right) + 8px);
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.gear:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+/* Locked boxes: '4 of 10 words played' under the lock note. */
+.type__progress { font-weight: 600; color: var(--ink-soft); }
+
+/* Settings and 'Coming in step 4' cards. */
+.settings__title { font-size: 28px; font-weight: 700; }
+.settings__line { font-size: 18px; color: var(--ink-soft); }
+.overlay__scroll .settings__title + .label { margin-top: 4px; }
+
 /* Version stamp under Start: small, grey, out of the way. */
 .version {
   margin: -2px 0 0;

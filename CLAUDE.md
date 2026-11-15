@@ -13,7 +13,7 @@ The repo (`KompassK/moirawordgame`) and folder (`moira-words`) keep their old na
 - Plain HTML, CSS and JavaScript. No framework, no bundler, no TypeScript, no build step for the app itself.
 - Static files only. Must run by double-clicking `index.html` (`file://`) and from GitHub Pages. Keep every path relative (`./…`) because Pages serves from a sub-path.
 - Node is used **only** for the build scripts (`npm run build`, `npm run icons`), never at runtime. `xlsx` (SheetJS, from the SheetJS CDN) is the only dependency; `@resvg/resvg-js` is the only dev dependency (icon rendering).
-- No accounts, no analytics, no sharing, **no third-party requests** (fonts are self-hosted; the game works offline). All persistence is `localStorage` (from step 3; until then the game lives in memory, so a refresh ends it).
+- No accounts, no analytics, no sharing, **no third-party requests** (fonts are self-hosted; the game works offline). All persistence is `localStorage`, and **only `storage.js` touches it** (see 'The device's memory').
 - **Before step 6:** `manifest.webmanifest` exists (step 2b) and is linked, so 'Add to Home Screen' gives a proper Sesquipedalian tile, but there is **no service worker yet** – no offline cache, and the phone fetches files fresh. The service worker comes at step 6 (hook marked in `index.html`). Once it exists, bump its cache version every time a cached file changes, and cache `assets/fonts/` and `assets/icons/`.
 - Primary target: phone in portrait. Must also work on a tablet in either orientation.
 - Keep the screen awake during a game with the Wake Lock API where supported; ignore silently if not.
@@ -36,6 +36,8 @@ The repo (`KompassK/moirawordgame`) and folder (`moira-words`) keep their old na
 | `assets/share.svg` | Source artwork for the share image, 1200×630: the bordered S, 'SESQUIPEDALIAN' (Josefin Sans Bold as paths, 0.12em tracking) and the tagline in the system sans-serif, grey. |
 | `assets/icons/` | Rendered, committed: `icon-192.png`, `icon-512.png` (purpose `any`), `icon-512-maskable.png` (purpose `maskable`), `apple-touch-icon.png` (180), `favicon-32.png`, `favicon.ico` (16/32/48). |
 | `assets/share.png` | Rendered, committed share image (1200×630). |
+| `storage.js` | Everything the device remembers between games (step 3), behind one small `Store` module. Loaded after `words.js`, before `game.js`. |
+| `tests/index.html`, `tests/step3.test.js` | Step 3 tests. Open `tests/index.html` in any browser (double-click works); it uses an in-memory store, never the real one. The page title ends PASS or FAIL. |
 | `scripts/build-icons.js` | `npm run icons`: renders `assets/icons/*` and `assets/share.png` from the two SVGs with resvg. **Only re-run if `icon.svg` or `share.svg` changes**, then commit the PNGs. |
 
 ## Look and feel
@@ -77,6 +79,7 @@ All other columns are ignored. `Bonus point available? (Y/N)` is retired; do not
 {
   "generatedAt": "ISO timestamp",
   "source": "filename of the xlsx",
+  "datasetId": "f7f1920f-50",          // FNV-1a hash of the source filename + '-' + number of words
   "words": [ { "id": 9001, "word": "…", "definition": "…", "keywords": "…", "twist": null,
                "quote": "…", "quoteGroup": 1, "season": 1, "episode": 1, "episodeTitle": "…",
                "sceneContext": "…", "imageFile": "…", "quoteOnPhoto": false,
@@ -99,8 +102,10 @@ All other columns are ignored. `Bonus point available? (Y/N)` is retired; do not
   - **Define the word** – 'Say what the word means. Hints cost points. 2–4 players.'
   - **Fill in the blank** – 'Supply the missing word from the quote. 2–4 players.'
   - **Name the episode** – 'Which season and episode is the quote from? 2–4 players.'
-  - A locked box is dashed, greyed, can't be chosen, and shows **only** 'Play a Define the word game first to unlock this mode' – no tag line, no player range. Its tag line and player range appear once it unlocks (`isUnlocked()` in `game.js`; only Define the word until step 3). A word joiner keeps '2–4' together on one line.
-- A big **Start** button goes to How to play.
+  - A locked box is dashed, greyed, can't be chosen, and shows **only** 'Play a Define the word game first to unlock this mode' and, under it, the progress ('4 of 10 words played') – no tag line, no player range. Its tag line and player range appear once it unlocks (see Unlock rule; `isUnlocked()` in `game.js`). A word joiner keeps '2–4' together on one line.
+  - Until step 4, tapping an unlocked Fill in the blank or Name the episode box opens a small card – the game's name, 'Coming in step 4', Close – and the chosen way to play stays Define the word.
+- A big **Start** button goes to How to play. If there's a saved game (see Saving and resuming), **Resume game** (black) sits above Start (then outlined), and Start first asks 'Abandon the saved game?' – **Abandon it** / **Keep it**.
+- A small grey **gear** at the top right opens the Settings card (see The device's memory). The front card's content starts below the gear.
 
 ### Rules overlay
 A small **Rules** link on the How to play screen and on the pass-the-device screen opens the front card's content as an overlay – title, tagline, intro – followed by 'How to play' for all three ways to play. Close with the **Close** button or Escape.
@@ -119,7 +124,7 @@ A small **Rules** link on the How to play screen and on the pass-the-device scre
 - A top bar with **‹ Back** (to the front card, to change the way to play) and **Rules**.
 - The chosen way to play's name as the **title** (e.g. 'Define the word', shrunk to fit one line if needed), **How to play** as the subtitle under it, then its how-to-play text.
 - **Number of players: 2, 3 or 4, for every way to play.** Every game needs a tester and an answerer, so there is no solo mode; five and six don't exist. (`MIN_PLAYERS` / `MAX_PLAYERS` in `game.js`.) For Define the word the pool-size check stays (the dummy list supports 4) but won't bite.
-- Names in seating order (clockwise). A blank name becomes 'Player N', so a game can start in three taps (Start, Start the game, ready). **Start the game**.
+- Names in seating order (clockwise), **pre-filled with the names from the last game** on this device (and the player count set to match). A blank name becomes 'Player N', so a game can start in three taps (Start, Start the game, ready). **Start the game**.
 - Phone: all of this in one column with Start the game pinned; tablet: how-to-play text left, players and names right.
 - Words per turn is fixed, not configurable.
 
@@ -178,7 +183,7 @@ The tester's screen, top to bottom: 'Testing: [answerer] · Question n of 10'; t
 
 ### Tiebreak
 - Offered when the top score is shared. The tied players, in seating order, each answer one Catherine O'Hara bonus word per round, scored exactly as a normal bonus word and added to their totals. The tester is the next player round the table, as usual, with a pass-the-device screen before each word ('Tiebreak – round n', the tied players' scores).
-- Words: bonus words not yet drawn in this game, at random. **From step 3:** prefer words never asked on this device, then **reuse** bonus words asked in earlier games; only words already drawn in *this* game are off limits. (Until step 3 nothing is remembered between games, so every word not drawn this game is available anyway.)
+- Words: any bonus word not yet drawn in *this* game, **least-asked first** (same rule as the main draw), so never-asked words come first and then bonus words from earlier games are reused. Tiebreak words count as asked.
 - After each full round, if one player is ahead, they win ('[Name] wins!', 'Won on the tiebreak'). If not, anyone behind the leaders drops out ('Still level: A and B. Another round.') and the leaders play another round. (Drop-out confirmed by Katharine.)
 - If there aren't enough unused bonus words for every remaining player to have one in the next round, it's a **Draw** ('The bonus words have run out, so it's a draw between A and B.').
 
@@ -191,21 +196,57 @@ Same turn structure as Option 1: each player has one turn of **10 questions**, t
 ### Option 3 – Name the episode (step 4)
 Same turn structure: one turn of **10 questions** per player, everyone has a turn, then the round ends. 2–4 players. Tester reads the quote (and shows the photo if there is one); answerer names the season, then the episode. Season right → 1; season and episode right → 3; season wrong → 0. Give up = pass (0, next question).
 
-### No-repeat tracking (step 3)
-- `localStorage` records, per word, whether it has ever been asked in an Option 1 turn on this device.
-- The main and bonus pools cycle independently. A game draws unused words first; a pool resets its own 'used' flags when its unused stock is too small for the next game.
-- A word is marked used only when actually asked. No word is drawn twice within one game.
+## The device's memory (step 3)
 
-### Unlock rule (step 3)
-Options 2 and 3 draw only from words with an Option 1 history on this device, and unlock once that set holds 10 or more words.
+### Storage schema – `storage.js`
+One `localStorage` key, `sesquipedalian`, holding:
+```json
+{
+  "schemaVersion": 1,
+  "names": ["Kath", "", "Alexis"],
+  "datasets": {
+    "f7f1920f-50": { "words": { "9001": { "n": 2, "last": "2026-11-15" } } }
+  },
+  "savedGame": { "datasetId": "f7f1920f-50", "savedAt": 1794770000000, "game": { … } }
+}
+```
+- **`datasets[datasetId].words`** – per word ID, `n` = times asked in an Option 1 turn on this device, `last` = local date last asked. Keyed by the dataset identifier from `words.js`, so a different spreadsheet (the live one at step 7) automatically starts with no usage and no saved game.
+- **`names`** – the last game's names in seating order, as typed (blanks stay blank, so 'Player N' isn't remembered), up to 4. Not per dataset: they survive the switch to live data.
+- **`savedGame`** – the game in progress (see below), with the dataset it belongs to and when it was saved.
+- `schemaVersion` is 1. `migrate()` in `storage.js` is where later versions convert old records; anything unrecognised (or corrupt JSON) starts fresh.
+- Every read and write is wrapped in try/catch. If storage is unavailable or full, the game plays normally and remembers changes for the session only; the Settings card then says nothing will be remembered.
+
+### Asked, and the two pools
+- A word counts as **asked** the first time it reaches the turn screen (`markAsked()`, called from `render()`) – not when drawn. Words drawn but never shown (e.g. after End game) don't count. Re-showing a question after a resume or an undo doesn't count again. Tiebreak bonus words count.
+- The main and bonus pools cycle independently.
+- **Least-asked first** (`leastAskedFirst()` in `game.js`): every draw takes words with the lowest ask-count first – never asked, then asked once, then twice – at random within each band. This **replaces the explicit 'reset' step**: when a pool's unused words run short, the draw simply dips into the least-asked ones. No flags to reset.
+- Within a game no word is drawn twice, and the shared-quote exclusion within a turn still applies.
+
+### Unlock rule
+The Option 1 history is derived from the ask-counts (a word is in it if `n > 0`); it isn't stored separately. Options 2 and 3 unlock when **10 or more main-pool words** have been asked on this device (`UNLOCK_WORDS`). Bonus words don't count. While locked, the boxes show 'n of 10 words played'. Options 2 and 3 will draw only from words in the history (step 4).
+
+### Saving and resuming
+- The whole game in progress is saved after **every tap** (`persist()` after each click), with words saved by ID. Undo history isn't saved.
+- On opening, a saved game for this dataset that is **under 24 hours old** puts **Resume game** on the front card. Older saves are ignored.
+- Resuming always lands on a pass-the-device screen, so nobody can gain from a refresh:
+  - saved **mid-question** (turn screen or photo): the same question again **from its start**, nothing scored for it (points are only added when a question ends) – via 'Pass the device to [tester]', then the question;
+  - saved on a **reveal card**: that result stands, and play moves on to the next word (via a pass-the-device screen, or the scoreboard if it was the last word);
+  - saved on a **handover or pass-the-device screen**: exactly as it was.
+- The saved game is cleared on the **final scoreboard**, on **End game**, when a new game starts, and on **Abandon it**.
+
+### Settings card (gear on the front card)
+- **Remembered names** (or 'None yet – names are remembered after a game starts.').
+- **Words played**: 'Main: 23 of 36 played' and 'Bonus: 6 of 14 played'.
+- **Reset word history** (outlined) with a confirm ('Reset word history? … Names and any saved game are kept.' – **Reset** / **Cancel**): clears the usage for the **current dataset only**. Not the saved game, not the names, not other datasets.
+- **Close**.
 
 ## Build order
 
 0. **Project setup** (CLAUDE.md, build script, `words.json`, placeholder `index.html`). ← done
 1. **Option 1 playable slice on dummy data**: setup, turns, hint ladder, bonus word, reveal card, pass-the-device, scoreboard, placeholder still. ← done
 2. **Rename to Sesquipedalian, restyle, answers to open questions**: front card with the way-to-play boxes, How to play screen with players and names, rules overlay, 2–4 players for every way to play (no solo mode), black/white/grey palette, self-hosted Josefin Sans, Give up, undo on the turn screen, re-show photo, definition on a correct reveal, tiebreak, End game. Follow-up refinements: game name as the How to play screen's title, intro trimmed and 'Highest score wins.' added, Give up as a pass in all three rules texts, 10-question turns for Options 2 and 3. ← done
-2b. **Home-screen icon, share preview and version stamp** (no game-logic changes): `assets/icon.svg` and `share.svg`, `npm run icons` → rendered PNGs and `favicon.ico`, `manifest.webmanifest`, icon / favicon / theme-colour / Open Graph / Twitter tags in `index.html`, version stamp on the front card. ← **done** (next is step 3)
-3. Persistent no-repeat tracking and the Option 2/3 unlock.
+2b. **Home-screen icon, share preview and version stamp** (no game-logic changes): `assets/icon.svg` and `share.svg`, `npm run icons` → rendered PNGs and `favicon.ico`, `manifest.webmanifest`, icon / favicon / theme-colour / Open Graph / Twitter tags in `index.html`, version stamp on the front card. ← done
+3. **The device remembers things between games**: `storage.js` (versioned schema, keyed by dataset), per-word ask-counts with least-asked-first draws in two independent pools, the Option 2/3 unlock at 10 main words with a progress count and a 'Coming in step 4' card, game saved after every tap with Resume game (under 24 hours) and the abandon check, Settings card (remembered names, words played, Reset word history), tests in `tests/`. ← **done** (next is step 4)
 4. Options 2 and 3.
 5. Real images and the quote-overlay rule.
 6. Service worker (offline), GitHub Pages deploy check. (The manifest already exists from step 2b.)
@@ -229,7 +270,9 @@ On the phone, if the stamp's time is older than the last push, it's still showin
 
 ## Open questions
 
-None at present.
+1. **Resume resets the question to its start – including hints already used.** As specified, a refresh mid-question brings the question back at its start, worth 4 again. But if the quote had already been read, or a wrong guess had capped it at 1, the answerer has now heard the quote and could still score 4. Should a resume instead keep the hints used and any cap (but still score nothing until the question is answered)?
+2. **Remembered names aren't tied to the word list.** They survive the switch to the live data and aren't cleared by Reset word history (as asked). Is a way to forget them wanted, e.g. a 'Forget names' button in Settings?
+3. **Start vs Play.** Step 3's brief calls the front card's button 'Play'; it still says **Start** (step 2 wording). Rename it to Play?
 
 *Resolved in step 2: tiebreak drop-out (yes); tiebreak reuses earlier games' bonus words from step 3 (yes); Options 2 and 3 are turns of 10 questions; Give up is in all three ways to play and in all three rules texts, goes straight to the reveal card and can be undone.*
 

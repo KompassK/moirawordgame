@@ -130,6 +130,27 @@ const UI = {
   endYes: 'End game',
   endNo: 'Keep playing',
 
+  // Remembering things between games (step 3)
+  lockedProgress: (n, of) => `${n} of ${of} words played`,
+  comingSoon: 'Coming in step 4',
+  comingSoonNote: 'This way to play is unlocked, but it hasn’t been built yet.',
+  resumeGame: 'Resume game',
+  abandonConfirm: 'Abandon the saved game?',
+  abandonYes: 'Abandon it',
+  abandonNo: 'Keep it',
+  settings: 'Settings',
+  rememberedNames: 'Remembered names',
+  noNames: 'None yet – names are remembered after a game starts.',
+  wordsPlayed: 'Words played',
+  poolPlayed: (pool, n, of) => `${pool}: ${n} of ${of} played`,
+  mainPool: 'Main',
+  bonusPool: 'Bonus',
+  resetHistory: 'Reset word history',
+  resetConfirm: 'Reset word history? This device will forget which words have been played, and Fill in the blank and Name the episode will lock again. Names and any saved game are kept.',
+  resetYes: 'Reset',
+  cancel: 'Cancel',
+  noMemory: 'This browser isn’t letting the game save anything, so nothing will be remembered after this session.',
+
   // Version stamp on the front card: 'v f0dfa17 · 28 Sep 2026 14:05'.
   // '+' after the commit means it was built with uncommitted changes.
   version: (commit, dirty, when) => `v ${commit}${dirty ? '+' : ''} · ${when}`,
@@ -145,10 +166,9 @@ const QUESTIONS_PER_TURN = MAIN_PER_TURN + 1; // plus the bonus word, always las
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 4;
 
-// Options 2 and 3 unlock in step 3; until then only Define the word is open.
-function isUnlocked(type) {
-  return type === 'define';
-}
+// Options 2 and 3 unlock once this many main-pool words have been asked in
+// Define the word on this device.
+const UNLOCK_WORDS = 10;
 const PLACEHOLDER_STILL = './assets/placeholder.svg';
 
 // Main-pool hint ladder: points for a right answer after 0, 1 or 2 hints.
@@ -165,14 +185,28 @@ const DATA = window.MOIRA_WORDS;
 const MAIN = DATA ? DATA.words.filter(w => w.pool === 'main') : [];
 const BONUS_POOL = DATA ? DATA.words.filter(w => w.pool === 'bonus') : [];
 
+const WORDS_BY_ID = new Map(DATA ? DATA.words.map(w => [w.id, w]) : []);
+
 // Most players the word list can serve without repeating a word in a game.
 const PLAYER_LIMIT = Math.min(MAX_PLAYERS, Math.floor(MAIN.length / MAIN_PER_TURN), BONUS_POOL.length);
+
+// The device's memory (storage.js), keyed by this word list.
+Store.init(DATA && (DATA.datasetId || `unknown-${DATA.words.length}`));
+
+// Option 1 history is the ask-counts: a word is in it if it has ever been asked.
+const mainPlayed = () => Store.playedCount(MAIN.map(w => w.id));
+const bonusPlayed = () => Store.playedCount(BONUS_POOL.map(w => w.id));
+
+function isUnlocked(type) {
+  return type === 'define' || mainPlayed() >= UNLOCK_WORDS;
+}
 
 // --- state ------------------------------------------------------------------
 
 const state = {
   screen: 'front',          // front | setup | handover | question | photo | reveal | pass | final
-  overlay: null,            // null | 'rules' | 'confirmEnd'
+  overlay: null,            // null | 'rules' | 'confirmEnd' | 'settings' | 'confirmReset' | 'confirmAbandon' | 'comingSoon'
+  comingSoonType: null,     // which way to play the 'Coming in step 4' card is about
   setup: { type: 'define', count: 2, names: [] },
   players: [],              // { name, score }
   turn: 0,                  // index of the current answerer
@@ -187,11 +221,13 @@ const state = {
   tiebreak: null,           // see startTiebreak()
 };
 
-function newQuestion(word) {
+// `asked` turns true the first time the question reaches the turn screen,
+// which is when it counts as asked (see markAsked()).
+function newQuestion(word, asked = false) {
   return word.pool === 'bonus'
     // phase: start | guessing | coldWrong | sentence
-    ? { word, kind: 'bonus', phase: 'start', coldTried: false, note: null }
-    : { word, kind: 'main', hints: 0, capped: false, note: null };
+    ? { word, kind: 'bonus', phase: 'start', coldTried: false, note: null, asked }
+    : { word, kind: 'main', hints: 0, capped: false, note: null, asked };
 }
 
 function mainPoints(q) {
@@ -224,13 +260,23 @@ function shuffle(list) {
   return a;
 }
 
+// Lowest ask-count first (never asked, then asked once, then twice…), random
+// within each band. This is the 'unused first' rule and also the pool reset:
+// when the unused words run short, the draw simply dips into the least-asked.
+function leastAskedFirst(words) {
+  return shuffle(words)
+    .map(w => ({ w, n: Store.askCount(w.id) }))
+    .sort((a, b) => a.n - b.n)            // stable, so the shuffle survives within a band
+    .map(x => x.w);
+}
+
 // Nine main words (no two from the same quote group in one turn) then one
 // bonus word. No word is drawn twice in a game.
 function drawTurn() {
   const picked = [];
   const groups = new Set();
   const skipped = [];
-  for (const w of shuffle(MAIN.filter(w => !state.usedIds.has(w.id)))) {
+  for (const w of leastAskedFirst(MAIN.filter(w => !state.usedIds.has(w.id)))) {
     if (picked.length === MAIN_PER_TURN) break;
     if (w.quoteGroup !== null && groups.has(w.quoteGroup)) { skipped.push(w); continue; }
     picked.push(w);
@@ -247,9 +293,11 @@ function drawTurn() {
   return turn;
 }
 
-// A bonus word not yet drawn this game, or undefined if none are left.
+// A bonus word not yet drawn this game (least-asked first), or undefined if
+// none are left. The tiebreak uses this too, so it prefers never-asked words
+// and then reuses ones from earlier games.
 function drawBonus() {
-  return shuffle(BONUS_POOL.filter(w => !state.usedIds.has(w.id)))[0];
+  return leastAskedFirst(BONUS_POOL.filter(w => !state.usedIds.has(w.id)))[0];
 }
 
 const bonusLeft = () => BONUS_POOL.filter(w => !state.usedIds.has(w.id)).length;
@@ -278,6 +326,7 @@ document.addEventListener('visibilitychange', () => {
 // --- game flow --------------------------------------------------------------
 
 function startGame(names) {
+  Store.clearGame();
   state.players = names.map(name => ({ name, score: 0 }));
   state.usedIds = new Set();
   state.tiebreak = null;
@@ -358,7 +407,94 @@ function beginNextTurn() {
 
 function finishGame() {
   keepAwake(false);
+  Store.clearGame();
   state.screen = 'final';
+}
+
+// A question counts as asked the first time it reaches the turn screen –
+// not when it's drawn, so words left unasked by End game don't count.
+// Called from render(), so every route onto the turn screen is covered.
+function markAsked() {
+  if (state.screen !== 'question' || !state.q || state.q.asked) return;
+  state.q.asked = true;
+  Store.recordAsked(state.q.word.id);
+}
+
+// --- saving and resuming the game in progress ------------------------------
+// The game is saved after every tap (see the click handler). Words are saved
+// by ID; undo history isn't saved, because a resume never lands mid-question.
+
+const GAME_SCREENS = ['handover', 'question', 'photo', 'reveal', 'pass'];
+
+function questionToSave(q) {
+  if (!q) return null;
+  const { word, ...rest } = q;
+  return { ...rest, wordId: word.id };
+}
+
+function serializeGame() {
+  const tb = state.tiebreak;
+  return {
+    screen: state.screen,
+    players: state.players.map(p => ({ name: p.name, score: p.score })),
+    turn: state.turn,
+    turnScore: state.turnScore,
+    questionIds: state.questions.map(w => w.id),
+    qIndex: state.qIndex,
+    q: questionToSave(state.q),
+    result: state.result,
+    usedIds: [...state.usedIds],
+    tiebreak: tb && {
+      contenders: tb.contenders.map(p => state.players.indexOf(p)),
+      round: tb.round, index: tb.index, outcome: tb.outcome, stillLevel: tb.stillLevel,
+    },
+  };
+}
+
+// Put a saved game back into `state`, landing on a pass-the-device screen:
+// - saved mid-question (turn screen or photo): back to the start of that
+//   question with nothing scored (points are only added when a question ends);
+// - saved on a reveal card: that result stands; move on to the next word;
+// - saved on a handover or pass screen: exactly as it was.
+// Returns false (and changes nothing) if the save doesn't fit this word list.
+function restoreGame(g) {
+  try {
+    const word = id => { const w = WORDS_BY_ID.get(id); if (!w) throw new Error('unknown word ' + id); return w; };
+    const players = g.players.map(p => ({ name: String(p.name), score: Number(p.score) || 0 }));
+    const questions = g.questionIds.map(word);
+    const q = g.q ? { ...g.q, word: word(g.q.wordId) } : null;
+    if (q) delete q.wordId;
+    if (!GAME_SCREENS.includes(g.screen) || !players.length) throw new Error('bad screen');
+
+    Object.assign(state, {
+      players, questions, q,
+      turn: g.turn, turnScore: g.turnScore, qIndex: g.qIndex,
+      result: g.result || null,
+      usedIds: new Set(g.usedIds),
+      history: [], undo: null, overlay: null,
+      tiebreak: g.tiebreak && {
+        ...g.tiebreak,
+        contenders: g.tiebreak.contenders.map(i => players[i]),
+      },
+      screen: g.screen,
+    });
+  } catch (e) {
+    return false;
+  }
+
+  if (state.screen === 'question' || state.screen === 'photo') {
+    state.q = newQuestion(state.q.word, state.q.asked);   // start of the question again
+    state.screen = 'handover';
+  } else if (state.screen === 'reveal') {
+    nextQuestion();
+    if (state.screen === 'question') state.screen = 'handover';
+  }
+  return true;
+}
+
+// Save after every tap while a game is on; nothing is kept once it's over.
+function persist() {
+  if (GAME_SCREENS.includes(state.screen) && state.players.length) Store.saveGame(serializeGame());
 }
 
 function leaders(players) {
@@ -431,10 +567,34 @@ function nextTiebreakQuestion() {
 
 const actions = {
   selectType(el) {
-    if (isUnlocked(el.dataset.value)) state.setup.type = el.dataset.value;
+    const type = el.dataset.value;
+    if (!isUnlocked(type)) return;
+    if (type === 'define') state.setup.type = type;
+    else { state.comingSoonType = type; state.overlay = 'comingSoon'; }   // Options 2 and 3: step 4
   },
   frontStart() {
-    state.screen = 'setup';
+    if (Store.loadGame()) { state.overlay = 'confirmAbandon'; return; }
+    goToSetup();
+  },
+  confirmAbandon() {
+    Store.clearGame();
+    state.overlay = null;
+    goToSetup();
+  },
+  resume() {
+    const saved = Store.loadGame();
+    if (saved && restoreGame(saved)) keepAwake(true);
+    else Store.clearGame();                 // unusable: forget it and stay on the front card
+  },
+  showSettings() {
+    state.overlay = 'settings';
+  },
+  askReset() {
+    state.overlay = 'confirmReset';
+  },
+  confirmReset() {
+    Store.resetHistory();
+    state.overlay = 'settings';
   },
   back() {
     state.screen = 'front';
@@ -443,11 +603,10 @@ const actions = {
     state.setup.count = Number(el.dataset.value);
   },
   start() {
-    const names = [];
-    for (let i = 0; i < state.setup.count; i++) {
-      names.push((state.setup.names[i] || '').trim() || UI.defaultName(i + 1));
-    }
-    startGame(names);
+    const typed = state.setup.names.slice(0, state.setup.count).map(n => (n || '').trim());
+    while (typed.length < state.setup.count) typed.push('');
+    Store.setNames(typed);                  // blanks stay blank, so 'Player N' isn't remembered
+    startGame(typed.map((n, i) => n || UI.defaultName(i + 1)));
   },
   ready() {
     state.screen = 'question';
@@ -542,11 +701,25 @@ const actions = {
   },
   confirmEnd() {
     keepAwake(false);
+    Store.clearGame();
     state.overlay = null;
     state.tiebreak = null;
+    state.players = [];
     state.screen = 'front';
   },
 };
+
+// Setup starts with the names remembered from the last game, if any.
+function goToSetup() {
+  if (!state.setup.names.some(n => n && n.trim())) {
+    const remembered = Store.names();
+    if (remembered.some(n => n)) {
+      state.setup.names = remembered.slice();
+      state.setup.count = Math.min(MAX_PLAYERS, Math.max(MIN_PLAYERS, remembered.length));
+    }
+  }
+  state.screen = 'setup';
+}
 
 // --- helpers ----------------------------------------------------------------
 
@@ -620,16 +793,24 @@ function renderTypes() {
     const open = isUnlocked(key);
     const on = key === state.setup.type;
     const cls = !open ? ' type--locked' : on ? ' type--on' : '';
+    const progress = Math.min(mainPlayed(), UNLOCK_WORDS);
     return `<button type="button" class="type${cls}" data-action="selectType" data-value="${key}"
       ${open ? `aria-pressed="${on}"` : 'disabled'}>
       <span class="type__name">${esc(t.name)}</span>
       <span class="type__blurb">${esc(open ? `${t.blurb} ${t.players}` : UI.lockedNote)}</span>
+      ${open ? '' : `<span class="type__blurb type__progress">${esc(UI.lockedProgress(progress, UNLOCK_WORDS))}</span>`}
     </button>`;
   }).join('');
 }
 
+const GEAR_ICON = `<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false">
+  <path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6a.5.5 0 0 0 .1-.6l-2-3.5a.5.5 0 0 0-.6-.2l-2.5 1a7.4 7.4 0 0 0-1.7-1L14.4 2.4A.5.5 0 0 0 14 2h-4a.5.5 0 0 0-.5.4l-.4 2.7a7.4 7.4 0 0 0-1.7 1l-2.5-1a.5.5 0 0 0-.6.2l-2 3.5a.5.5 0 0 0 .1.6L4.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6a.5.5 0 0 0-.1.6l2 3.5a.5.5 0 0 0 .6.2l2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.7a.5.5 0 0 0 .5.4h4a.5.5 0 0 0 .5-.4l.4-2.7a7.4 7.4 0 0 0 1.7-1l2.5 1a.5.5 0 0 0 .6-.2l2-3.5a.5.5 0 0 0-.1-.6zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/>
+</svg>`;
+
 function renderFront() {
+  const saved = Store.loadGame();
   return `<section class="screen front">
+    <button type="button" class="gear" data-action="showSettings" aria-label="${esc(UI.settings)}">${GEAR_ICON}</button>
     <div class="front__body">
       <h1 class="display fit front__title">${esc(UI.title)}</h1>
       <p class="front__tagline">${esc(UI.tagline)}</p>
@@ -640,7 +821,8 @@ function renderFront() {
       <div class="types" role="group" aria-label="${esc(UI.waysToPlay)}">${renderTypes()}</div>
     </div>
     <div class="actions">
-      ${button('frontStart', UI.frontStart, 'btn--primary')}
+      ${saved ? button('resume', UI.resumeGame, 'btn--primary') : ''}
+      ${button('frontStart', UI.frontStart, saved ? 'btn--secondary' : 'btn--primary')}
       ${versionStamp()}
     </div>
   </section>`;
@@ -946,6 +1128,53 @@ function renderConfirmEnd() {
   </div>`;
 }
 
+// A small confirm card: message, a black 'yes' and an outlined 'no'.
+function renderConfirm(id, message, yesAction, yesLabel, noAction, noLabel) {
+  return `<div class="overlay" role="alertdialog" aria-modal="true" aria-labelledby="${id}">
+    <div class="overlay__card overlay__card--small">
+      <p class="overlay__message" id="${id}">${esc(message)}</p>
+      <div class="overlay__actions">
+        ${button(yesAction, yesLabel, 'btn--primary')}
+        ${button(noAction, noLabel, 'btn--secondary')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderSettings() {
+  const names = Store.names().filter(n => n);
+  return `<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="overlay__card overlay__card--small">
+      <div class="overlay__scroll">
+        <h1 class="display settings__title" id="settings-title">${esc(UI.settings)}</h1>
+        <h2 class="label">${esc(UI.rememberedNames)}</h2>
+        <p class="settings__line">${esc(names.length ? names.join(', ') : UI.noNames)}</p>
+        <h2 class="label">${esc(UI.wordsPlayed)}</h2>
+        <p class="settings__line">${esc(UI.poolPlayed(UI.mainPool, mainPlayed(), MAIN.length))}</p>
+        <p class="settings__line">${esc(UI.poolPlayed(UI.bonusPool, bonusPlayed(), BONUS_POOL.length))}</p>
+        ${Store.available() ? '' : `<p class="hint-text">${esc(UI.noMemory)}</p>`}
+      </div>
+      <div class="overlay__actions">
+        ${button('askReset', UI.resetHistory, 'btn--secondary')}
+        ${button('closeOverlay', UI.close, 'btn--primary')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderComingSoon() {
+  return `<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="soon-title">
+    <div class="overlay__card overlay__card--small">
+      <div class="overlay__scroll">
+        <h1 class="display settings__title" id="soon-title">${esc(UI.gameTypes[state.comingSoonType].name)}</h1>
+        <p class="settings__line"><strong>${esc(UI.comingSoon)}</strong></p>
+        <p class="settings__line">${esc(UI.comingSoonNote)}</p>
+      </div>
+      <div class="overlay__actions">${button('closeOverlay', UI.close, 'btn--primary')}</div>
+    </div>
+  </div>`;
+}
+
 function renderNoData() {
   return `<section class="screen centre"><div class="centre__body">
     <h1 class="display fit">${esc(UI.title)}</h1><p class="lead">${esc(UI.noData)}</p>
@@ -976,11 +1205,16 @@ function render() {
   }
   if (state.overlay === 'rules') html += renderRulesOverlay();
   if (state.overlay === 'confirmEnd') html += renderConfirmEnd();
+  if (state.overlay === 'settings') html += renderSettings();
+  if (state.overlay === 'comingSoon') html += renderComingSoon();
+  if (state.overlay === 'confirmReset') html += renderConfirm('reset-title', UI.resetConfirm, 'confirmReset', UI.resetYes, 'showSettings', UI.cancel);
+  if (state.overlay === 'confirmAbandon') html += renderConfirm('abandon-title', UI.abandonConfirm, 'confirmAbandon', UI.abandonYes, 'closeOverlay', UI.abandonNo);
 
   document.body.dataset.theme = theme;
   document.body.classList.toggle('has-overlay', Boolean(state.overlay));
   app.innerHTML = html;
   fitAll();
+  markAsked();
 
   // Start each new screen or question at the top.
   const key = `${state.screen}:${state.turn}:${state.qIndex}:${state.q && state.q.word.id}`;
@@ -1016,6 +1250,7 @@ document.addEventListener('click', e => {
   if (!el || el.disabled || !actions[el.dataset.action]) return;
   actions[el.dataset.action](el);
   render();
+  persist();
 });
 
 app.addEventListener('input', e => {
@@ -1029,12 +1264,12 @@ app.addEventListener('keydown', e => {
   e.preventDefault();
   const next = app.querySelector(`[data-name="${Number(e.target.dataset.name) + 1}"]`);
   if (next) next.focus();
-  else { actions.start(); render(); }
+  else { actions.start(); render(); persist(); }
 });
 
 // Escape closes an overlay.
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && state.overlay) { state.overlay = null; render(); }
+  if (e.key === 'Escape' && state.overlay) { state.overlay = state.overlay === 'confirmReset' ? 'settings' : null; render(); }
 });
 
 render();
